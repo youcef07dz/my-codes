@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pocket Galaxy Defender</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hud" aria-label="Game status">
+        <div>
+          <span class="label">Wave</span>
+          <strong id="wave">1</strong>
+        </div>
+        <div>
+          <span class="label">Score</span>
+          <strong id="score">0</strong>
+        </div>
+        <div>
+          <span class="label">Scrap</span>
+          <strong id="scrap">0</strong>
+        </div>
+        <div>
+          <span class="label">Hull</span>
+          <strong id="hull">100</strong>
+        </div>
+        <button id="soundToggle" class="sound-toggle" type="button" aria-pressed="true">
+          <span class="label">Sound</span>
+          <strong>On</strong>
+        </button>
+      </section>
+
+      <section class="game-wrap" aria-label="Pocket Galaxy Defender game">
+        <canvas id="game" width="960" height="540"></canvas>
+        <div id="overlay" class="overlay">
+          <div class="panel">
+            <p class="eyebrow">Pocket Galaxy Defender</p>
+            <h1>Guard the lane. Grab scrap. Evolve fast.</h1>
+            <p class="copy">Drag or move your pointer to pilot. Survive endless waves, boss fusions, and automatic weapon upgrades. On desktop, WASD or arrow keys work too.</p>
+            <div class="ship-select" aria-label="Choose player ship">
+              <button class="ship-card is-selected" type="button" data-ship="rapid">
+                <span>Needlewing</span>
+                <small>Fast fire, slow movement</small>
+                <b>Fire 92</b>
+                <b>Speed 48</b>
+                <b>Damage 54</b>
+              </button>
+              <button class="ship-card" type="button" data-ship="dash">
+                <span>Comet Viper</span>
+                <small>Fast movement, slow fire</small>
+                <b>Fire 46</b>
+                <b>Speed 94</b>
+                <b>Damage 58</b>
+              </button>
+              <button class="ship-card" type="button" data-ship="heavy">
+                <span>Titan Moth</span>
+                <small>Slow movement, slow fire, double damage</small>
+                <b>Fire 38</b>
+                <b>Speed 42</b>
+                <b>Damage 100</b>
+              </button>
+            </div>
+            <button id="primaryAction" type="button">Start Run</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="upgrades" class="upgrades" aria-label="Upgrade choices" hidden>
+        <button type="button" data-upgrade="fireRate">
+          <span>Rapid Core</span>
+          <small>Fire faster</small>
+        </button>
+        <button type="button" data-upgrade="spread">
+          <span>Twin Splitter</span>
+          <small>Add side shots</small>
+        </button>
+        <button type="button" data-upgrade="shield">
+          <span>Shield Patch</span>
+          <small>Repair hull</small>
+        </button>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>حاسبة استهلاك ساعة الحائط</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { color: #2c3e50; text-align: center; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        button:hover { background-color: #219150; }
+        .result { margin-top: 20px; padding: 15px; background: #e8f6ef; border-radius: 5px; border-right: 5px solid #27ae60; }
+        .result p { margin: 5px 0; color: #333; }
+        span { font-weight: bold; color: #c0392b; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>حاسبة تكلفة الكهرباء</h2>
+    
+    <div class="input-group">
+        <label>الجهد (V):</label>
+        <input type="number" id="voltage" value="5" step="0.1">
+    </div>
+
+    <div class="input-group">
+        <label>الاستهلاك (mAh):</label>
+        <input type="number" id="mah" value="300">
+    </div>
+
+    <div class="input-group">
+        <label>ساعات التشغيل/يوم:</label>
+        <input type="number" id="hours" value="24">
+    </div>
+
+    <div class="input-group">
+        <label>عدد الأيام:</label>
+        <input type="number" id="days" value="90">
+    </div>
+
+    <div class="input-group">
+        <label>سعر الكيلوواط (DZA):</label>
+        <input type="number" id="rate" value="4.1789" step="0.0001">
+    </div>
+
+    <button onclick="calculate()">احسب التكلفة</button>
+
+    <div id="resultBox" class="result" style="display:none;">
+        <p>إجمالي الاستهلاك: <span id="kwhResult">0</span> كيلوواط/ساعة</p>
+        <p>التكلفة الإجمالية: <span id="costResult">0</span> دج</p>
+    </div>
+</div>
+
+<script>
+    function calculate() {
+        const v = parseFloat(document.getElementById('voltage').value);
+        const mah = parseFloat(document.getElementById('mah').value);
+        const hours = parseFloat(document.getElementById('hours').value);
+        const days = parseFloat(document.getElementById('days').value);
+        const rate = parseFloat(document.getElementById('rate').value);
+
+        // حساب القدرة بالواط (P = V * A)
+        const amps = mah / 1000;
+        const watts = v * amps;
+
+        // حساب إجمالي الطاقة بالكيلوواط ساعي
+        const totalKwh = (watts * hours * days) / 1000;
+
+        // حساب التكلفة
+        const totalCost = totalKwh * rate;
+
+        // عرض النتائج
+        document.getElementById('kwhResult').innerText = totalKwh.toFixed(4);
+        document.getElementById('costResult').innerText = totalCost.toFixed(2);
+        document.getElementById('resultBox').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>

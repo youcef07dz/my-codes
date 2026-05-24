@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultra Decode - All Encodings At Once</title>
+<style>
+:root {
+    --bg: #0d0d14;
+    --surface: #16161f;
+    --surface2: #1e1e2e;
+    --border: #2a2a3e;
+    --text: #ddddf0;
+    --muted: #7777aa;
+    --accent: #7c5cfc;
+    --accent-hover: #6a48e8;
+    --green: #4ade80;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --radius: 8px;
+    --font: 'Segoe UI','SF Mono','Cascadia Code','Consolas',monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    padding: 20px;
+}
+.container { max-width: 1400px; margin: 0 auto; }
+
+header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 20px;
+}
+header h1 {
+    font-size: 1.4rem; font-weight: 700;
+    background: linear-gradient(135deg,var(--accent),#a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    white-space: nowrap;
+}
+.badge {
+    font-size: .65rem; color: var(--muted);
+    background: var(--surface); padding: 2px 10px;
+    border-radius: 20px; border: 1px solid var(--border);
+}
+
+.input-section {
+    margin-bottom: 20px;
+}
+.input-section textarea {
+    width: 100%; min-height: 100px; resize: vertical;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; font-family: var(--font); font-size: .85rem;
+    line-height: 1.5; outline: none;
+}
+.input-section textarea:focus { border-color: var(--accent); }
+.input-bar {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    align-items: center; margin-bottom: 10px;
+}
+.input-bar label { font-size: .8rem; color: var(--muted); }
+.btn {
+    padding: 7px 18px; border: none; border-radius: var(--radius);
+    font-family: var(--font); font-size: .83rem; font-weight: 600;
+    cursor: pointer; transition: all .2s;
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border);
+}
+.btn:hover { background: var(--border); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-green { background: #16a34a; color: #fff; border-color: #16a34a; }
+.btn-green:hover { background: #15803d; }
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 12px;
+    transition: grid-template-columns .2s;
+}
+.results-grid.single { grid-template-columns: 1fr; }
+.result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color .2s;
+}
+.result-card:hover { border-color: var(--accent); }
+.result-card.error .result-value { color: var(--red); }
+.result-card.success .result-value { color: var(--green); }
+.card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 10px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: .7rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .03em;
+}
+.card-header .name { color: var(--muted); }
+.card-header .actions { display: flex; gap: 4px; }
+.card-header .actions button {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: .75rem; padding: 1px 5px;
+    border-radius: 3px; transition: all .15s;
+}
+.card-header .actions button:hover { background: var(--border); color: var(--text); }
+.result-value {
+    padding: 8px 10px;
+    font-size: .78rem; line-height: 1.4;
+    word-break: break-all; max-height: 100px; overflow-y: auto;
+    min-height: 28px; white-space: pre-wrap;
+    font-family: var(--font);
+}
+.result-value::-webkit-scrollbar { width: 4px; }
+.result-value::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.copy-toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #fff; padding: 8px 20px;
+    border-radius: var(--radius); font-size: .82rem;
+    opacity: 0; transition: opacity .3s; pointer-events: none;
+    z-index: 999;
+}
+.copy-toast.show { opacity: 1; }
+
+.info-bar {
+    margin: 10px 0; padding: 8px 14px;
+    border-radius: var(--radius); font-size: .78rem;
+    display: none; word-break: break-all;
+}
+.info-bar.error { display: block; background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.3); color: var(--red); }
+.info-bar.success { display: block; background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.3); color: var(--green); }
+
+.stats { font-size: .72rem; color: var(--muted); margin-top: 12px; }
+
+@media(max-width:600px){
+    .results-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+    <h1>Ultra&zwj;Decode</h1>
+    <span class="badge" id="countBadge">0 encodings</span>
+</header>
+
+<div class="input-section">
+    <div class="input-bar">
+        <label>Input</label>
+        <select id="modeSelect">
+            <option value="decode">Decode</option>
+            <option value="encode">Encode</option>
+        </select>
+        <button class="btn" id="clearBtn">Clear</button>
+        <button class="btn" id="pasteBtn">Paste</button>
+        <button class="btn btn-primary" id="goBtn">Go</button>
+        <input type="text" id="keyInput" placeholder="Key/shift (optional)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-family:var(--font);font-size:.8rem;outline:none;width:140px">
+        <label style="font-size:.8rem;color:var(--muted)">Show</label>
+        <select id="filterSelect" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-family:var(--font);font-size:.8rem;outline:none">
+            <option value="">All</option>
+        </select>
+        <span class="stats" id="charCount">0 chars</span>
+    </div>
+    <textarea id="inputText" placeholder="Paste or type text here..."></textarea>
+    <div id="infoBar" class="info-bar"></div>
+</div>
+
+<div id="resultsContainer" class="results-grid"></div>
+
+<div id="copyToast" class="copy-toast">Copied!</div>
+</div>
+
+<script>
+const ENCODINGS = [];
+function reg(name, fn) {
+    ENCODINGS.push({name, ...fn});
+}
+
+function toBytes(s) { return new TextEncoder().encode(s); }
+function fromBytes(b) { return new TextDecoder().decode(b); }
+function hex(b) { return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+function fromHex(s) {
+    s=s.replace(/\s/g,'');
+    if(s.length%2) throw new Error('Odd hex length');
+    return new Uint8Array(s.match(/.{2}/g).map(x=>parseInt(x,16)));
+}
+function b64ToBytes(s) {
+    const bin = atob(s.replace(/-/g,'+').replace(/_/g,'/'));
+    return new Uint8Array([...bin].map(c=>c.charCodeAt(0)));
+}
+function bytesToB64(b, url=false) {
+    const bin = String.fromCharCode(...new Uint8Array(b));
+    return url ? btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'') : btoa(bin);
+}
+function rot(s, n) {
+    n=((n%26)+26)%26;
+    return s.replace(/[a-z]/gi,c=>{
+        const base=c<='Z'?65:97;
+        return String.fromCharCode((c.charCodeAt(0)-base+n)%26+base);
+    });
+}
+function atbash(s) {
+    return s.replace(/[a-z]/gi,c=>{
+        const base=c<='Z'?65:97;
+        return String.fromCharCode(25-(c.charCodeAt(0)-base)+base);
+    });
+}
+function vigenere(s, key, decode) {
+    if(!key) return s;
+    key=key.toLowerCase().replace(/[^a-z]/g,'');
+    if(!key) return s;
+    let ki=0;
+    return s.replace(/[a-z]/gi,c=>{
+        const base=c<='Z'?65:97;
+        const shift=key[ki++%key.length].charCodeAt(0)-97;
+        const n = decode ? 26-shift : shift;
+        return String.fromCharCode((c.charCodeAt(0)-base+n)%26+base);
+    });
+}
+function xorBytes(data, key) {
+    const kbytes = toBytes(key||'x');
+    if(!kbytes.length) throw new Error('Key required');
+    return new Uint8Array([...data].map((b,i)=>b ^ kbytes[i%kbytes.length]));
+}
+function morse(s, toCode) {
+    const fwd={'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---','K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-','U':'..-','V':'...-','W':'.--','X':'-..-','Y':'-.--','Z':'--..','0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.','.':'.-.-.-',',':'--..--','?':'..--..',"'":'.----.','!':'-.-.--','/':'-..-.','(':'-.--.',')':'-.---.','&':'.-...',':':'---...',';':'-.-.-.','=':'-...-','+':'.-.-.','-':'-....-','_':'..--.-','"':'.-..-.','$':'...-..-','@':'.--.-.'};
+    const rev={}; for(const[k,v]of Object.entries(fwd)) rev[v]=k;
+    if(toCode) return s.toUpperCase().split('').map(c=>c===' '?'/':fwd[c]||c).join(' ');
+    return s.trim().split(/\s+/).map(c=>c==='/'?' ':rev[c]||c).join('');
+}
+
+// ─── Register all encodings ──────────────────────────────────────────────────
+
+reg('Base64', {
+    enc: s => bytesToB64(toBytes(s)),
+    dec: s => fromBytes(b64ToBytes(s)),
+});
+reg('Base64 (URL safe)', {
+    enc: s => bytesToB64(toBytes(s), true),
+    dec: s => { let t=s.replace(/-/g,'+').replace(/_/g,'/'); while(t.length%4) t+='='; return fromBytes(b64ToBytes(t)); },
+});
+reg('Base32', {
+    enc: s => {
+        const b=toBytes(s); let r='',buf=0,bits=0,al='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        for(const byte of b){buf=(buf<<8)|byte;bits+=8;while(bits>=5){bits-=5;r+=al[(buf>>bits)&31];}}
+        if(bits) r+=al[(buf<<(5-bits))&31];
+        while(r.length%8) r+='=';
+        return r;
+    },
+    dec: s => {
+        s=s.replace(/[^A-Z2-7]/gi,''); let r=[],buf=0,bits=0,al='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        for(const c of s.toUpperCase()){const v=al.indexOf(c);if(v<0)continue;buf=(buf<<5)|v;bits+=5;if(bits>=8){bits-=8;r.push((buf>>bits)&255);}}
+        return fromBytes(new Uint8Array(r));
+    },
+});
+reg('Base16 (Hex)', {
+    enc: s => hex(toBytes(s)).toUpperCase(),
+    dec: s => fromBytes(fromHex(s)),
+});
+reg('Base58', {
+    enc: s => {
+        const al='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        let b=[...toBytes(s)],z=0; while(z<b.length&&b[z]===0) z++;
+        let r='1'.repeat(z),n=[...b],res=[];
+        while(n.length>0){let rem=0,nxt=[];for(const v of n){rem=rem*256+v;nxt.push(Math.floor(rem/58));rem%=58;}res.push(al[rem]);n=nxt.filter(x=>x!==0||nxt.indexOf(x)<nxt.indexOf(nxt.find(y=>y!==0)));if(n.length===0&&nxt.filter(x=>x!==0).length===0)break;n=nxt.filter((x,i)=>!(i===0&&x===0));}
+        return r+res.reverse().join('');
+    },
+    dec: s => {
+        const al='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        let z=0; while(z<s.length&&s[z]==='1') z++;
+        let n=[0]; for(const c of s){const v=al.indexOf(c);if(v<0)continue;let carry=v;for(let i=n.length-1;i>=0;i--){carry+=n[i]*58;n[i]=carry&255;carry>>=8;}while(carry){n.unshift(carry&255);carry>>=8;}}
+        for(let i=0;i<z;i++) n.unshift(0);
+        return fromBytes(new Uint8Array(n));
+    },
+});
+reg('Base85 (ASCII85)', {
+    enc: s => {
+        const b=toBytes(s); let r='<~';
+        for(let i=0;i<b.length;i+=4){let n=0;for(let j=0;j<4;j++) n=n*256+(i+j<b.length?b[i+j]:0);if(n===0){r+='z';continue;}let c='';for(let j=0;j<5;j++){c=String.fromCharCode((n%85)+33)+c;n=Math.floor(n/85);}r+=c;}
+        return r+'~>';
+    },
+    dec: s => {
+        s=s.replace(/<~|~>/g,'').replace(/\s/g,'').replace(/z/g,'!!!!!'); let r=[];
+        for(let i=0;i<s.length;i+=5){let c=s.slice(i,i+5),n=0;for(let j=0;j<c.length;j++) n=n*85+(c.charCodeAt(j)-33);for(let j=3;j>=0;j--){r.push((n>>(j*8))&255);}}
+        while(r.length&&r[r.length-1]===0) r.pop();
+        return fromBytes(new Uint8Array(r));
+    },
+});
+reg('Base36', {
+    enc: s => BigInt('0x'+hex(toBytes(s))).toString(36).toUpperCase(),
+    dec: s => { let n=BigInt('0x'+BigInt('0'+s,36).toString(16)); let h=n.toString(16); if(h.length%2) h='0'+h; return fromBytes(fromHex(h)); },
+});
+reg('ROT13', {
+    enc: s => rot(s,13), dec: s => rot(s,13),
+});
+reg('ROT47', {
+    enc: s => s.replace(/[!-~]/g,c=>String.fromCharCode(33+(c.charCodeAt(0)-33+47)%94)),
+    dec: s => s.replace(/[!-~]/g,c=>String.fromCharCode(33+(c.charCodeAt(0)-33+47)%94)),
+});
+reg('ROT-N (key=shift)', {
+    key: true,
+    enc: (s,k) => rot(s,parseInt(k)||13),
+    dec: (s,k) => rot(s,26-(parseInt(k)||13)),
+});
+reg('Caesar (key=shift)', {
+    key: true,
+    enc: (s,k) => rot(s,parseInt(k)||3),
+    dec: (s,k) => rot(s,26-(parseInt(k)||3)),
+});
+reg('Atbash', {
+    enc: s => atbash(s), dec: s => atbash(s),
+});
+reg('Vigenère (key=word)', {
+    key: true,
+    enc: (s,k) => vigenere(s,k,false),
+    dec: (s,k) => vigenere(s,k,true),
+});
+reg('XOR (key=text)', {
+    key: true,
+    enc: (s,k) => fromBytes(xorBytes(toBytes(s),k)),
+    dec: (s,k) => fromBytes(xorBytes(toBytes(s),k)),
+});
+reg('URL Encode', {
+    enc: s => encodeURIComponent(s),
+    dec: s => decodeURIComponent(s),
+});
+reg('HTML Entities', {
+    enc: s => { const d=document.createElement('textarea'); d.textContent=s; return d.innerHTML; },
+    dec: s => { const d=document.createElement('textarea'); d.innerHTML=s; return d.textContent; },
+});
+reg('Unicode Escapes (\\uXXXX)', {
+    enc: s => [...s].map(c=>{const cp=c.charCodeAt(0);return cp>127||cp<32?'\\u'+cp.toString(16).padStart(4,'0'):c;}).join(''),
+    dec: s => s.replace(/\\u([0-9a-fA-F]{4})/g,(_,h)=>String.fromCharCode(parseInt(h,16))),
+});
+reg('Quoted-Printable', {
+    enc: s => {
+        const b=toBytes(s); let r='',line='';
+        for(const byte of b){if(byte===32||(byte>=33&&byte<=60)||(byte>=62&&byte<=126)){if(line.length+1>75){r+=line+'=\r\n';line='';}line+=String.fromCharCode(byte);}else{const e='='+byte.toString(16).toUpperCase();if(line.length+e.length>75){r+=line+'=\r\n';line='';}line+=e;}}
+        return r+line;
+    },
+    dec: s => s.replace(/=\r?\n/g,'').replace(/=([0-9A-Fa-f]{2})/g,(_,h)=>String.fromCharCode(parseInt(h,16))),
+});
+reg('Binary (8-bit)', {
+    enc: s => [...toBytes(s)].map(b=>b.toString(2).padStart(8,'0')).join(' '),
+    dec: s => fromBytes(new Uint8Array(s.trim().split(/\s+/).map(b=>parseInt(b,2)))),
+});
+reg('Octal', {
+    enc: s => [...toBytes(s)].map(b=>b.toString(8).padStart(3,'0')).join(' '),
+    dec: s => fromBytes(new Uint8Array(s.trim().split(/\s+/).map(b=>parseInt(b,8)))),
+});
+reg('Decimal (bytes)', {
+    enc: s => [...toBytes(s)].map(b=>b.toString(10)).join(' '),
+    dec: s => fromBytes(new Uint8Array(s.trim().split(/\s+/).map(b=>parseInt(b,10)))),
+});
+reg('Morse Code', {
+    enc: s => morse(s, true),
+    dec: s => morse(s, false),
+});
+reg('A1Z26', {
+    enc: s => s.toUpperCase().replace(/[A-Z]/g,c=>(c.charCodeAt(0)-64)+' ').trim(),
+    dec: s => s.trim().split(/\s+/).map(n=>String.fromCharCode(64+parseInt(n))).join(''),
+});
+reg('JWT Decode', {
+    dec: s => {
+        const p=s.trim().split('.');
+        if(p.length!==3) throw new Error('Invalid JWT');
+        const h=JSON.parse(fromBytes(b64ToBytes(p[0])));
+        const b=JSON.parse(fromBytes(b64ToBytes(p[1])));
+        return JSON.stringify({header:h,payload:b},null,2);
+    },
+    enc: s => { throw new Error('JWT encode not supported'); },
+});
+reg('JSON Format', {
+    enc: s => { try{return JSON.stringify(JSON.parse(s),null,2);}catch{return JSON.stringify(s);} },
+    dec: s => { try{return JSON.stringify(JSON.parse(s),null,2);}catch(e){throw new Error('Invalid JSON');} },
+});
+reg('EBCDIC (CP037)', {
+    enc: s => {
+        const cp='\u0000\u0001\u0002\u0003\u009C\t\u0086\u007F\u0097\u008D\u008E\u000B\u000C\r\u000E\u000F\u0010\u0011\u0012\u0013\u009D\u0085\u0008\u0087\u0018\u0019\u0092\u008F\u001C\u001D\u001E\u001F\u0080\u0081\u0082\u0083\u0084\n\u0017\u001B\u0088\u0089\u008A\u008B\u008C\u0005\u0006\u0007\u0090\u0091\u0016\u0093\u0094\u0095\u0096\u0004\u0098\u0099\u009A\u009B\u0014\u0015\u009E\u001A \u00A0\u00E2\u00E4\u00E0\u00E1\u00E3\u00E5\u00E7\u00F1\u00A3\u002E\u003C\u0028\u002B\u007C\u0026\u00E9\u00EA\u00EB\u00E8\u00ED\u00EE\u00EF\u00EC\u00DF\u0021\u0024\u002A\u0029\u003B\u00AC\u002D\u002F\u00C2\u00C4\u00C0\u00C1\u00C3\u00C5\u00C7\u00D1\u00A6\u002C\u0025\u005F\u003E\u003F\u00F8\u00C9\u00CA\u00CB\u00C8\u00CD\u00CE\u00CF\u00CC\u0060\u003A\u0023\u0040\u0027\u003D\u0022\u00D8\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u00AB\u00BB\u00F0\u00FD\u00FE\u00B1\u006A\u006B\u006C\u006D\u006E\u006F\u0070\u0071\u0072\u00AA\u00BA\u00E6\u00B8\u00C6\u00A4\u00B5\u007E\u0073\u0074\u0075\u0076\u0077\u0078\u0079\u007A\u00A1\u00BF\u00D0\u00DD\u00DE\u00AE\u00A2\u00A3\u00A5\u00B7\u00A9\u00A7\u00B6\u00BC\u00BD\u00BE\u005B\u005C\u005D\u00AF\u00A8\u00B4\u00D7\u007B\u0041\u0042\u0043\u0044\u0045\u0046\u0047\u0048\u0049\u00AD\u00F4\u00F6\u00F2\u00F3\u00F5\u007D\u004A\u004B\u004C\u004D\u004E\u004F\u0050\u0051\u0052\u00B9\u00FB\u00FC\u00F9\u00FA\u00FF\u005C\u00F7\u0053\u0054\u0055\u0056\u0057\u0058\u0059\u005A\u00B2\u00D4\u00D6\u00D2\u00D3\u00D5\u0030\u0031\u0032\u0033\u0034\u0035\u0036\u0037\u0038\u0039\u00B3\u00DB\u00DC\u00D9\u00DA\u009F';
+        const fwd={};for(let i=0;i<cp.length;i++)fwd[String.fromCharCode(i)]=cp[i];
+        return [...s].map(c=>fwd[c]||c).join('');
+    },
+    dec: s => {
+        const cp='\u0000\u0001\u0002\u0003\u009C\t\u0086\u007F\u0097\u008D\u008E\u000B\u000C\r\u000E\u000F\u0010\u0011\u0012\u0013\u009D\u0085\u0008\u0087\u0018\u0019\u0092\u008F\u001C\u001D\u001E\u001F\u0080\u0081\u0082\u0083\u0084\n\u0017\u001B\u0088\u0089\u008A\u008B\u008C\u0005\u0006\u0007\u0090\u0091\u0016\u0093\u0094\u0095\u0096\u0004\u0098\u0099\u009A\u009B\u0014\u0015\u009E\u001A \u00A0\u00E2\u00E4\u00E0\u00E1\u00E3\u00E5\u00E7\u00F1\u00A3\u002E\u003C\u0028\u002B\u007C\u0026\u00E9\u00EA\u00EB\u00E8\u00ED\u00EE\u00EF\u00EC\u00DF\u0021\u0024\u002A\u0029\u003B\u00AC\u002D\u002F\u00C2\u00C4\u00C0\u00C1\u00C3\u00C5\u00C7\u00D1\u00A6\u002C\u0025\u005F\u003E\u003F\u00F8\u00C9\u00CA\u00CB\u00C8\u00CD\u00CE\u00CF\u00CC\u0060\u003A\u0023\u0040\u0027\u003D\u0022\u00D8\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u00AB\u00BB\u00F0\u00FD\u00FE\u00B1\u006A\u006B\u006C\u006D\u006E\u006F\u0070\u0071\u0072\u00AA\u00BA\u00E6\u00B8\u00C6\u00A4\u00B5\u007E\u0073\u0074\u0075\u0076\u0077\u0078\u0079\u007A\u00A1\u00BF\u00D0\u00DD\u00DE\u00AE\u00A2\u00A3\u00A5\u00B7\u00A9\u00A7\u00B6\u00BC\u00BD\u00BE\u005B\u005C\u005D\u00AF\u00A8\u00B4\u00D7\u007B\u0041\u0042\u0043\u0044\u0045\u0046\u0047\u0048\u0049\u00AD\u00F4\u00F6\u00F2\u00F3\u00F5\u007D\u004A\u004B\u004C\u004D\u004E\u004F\u0050\u0051\u0052\u00B9\u00FB\u00FC\u00F9\u00FA\u00FF\u005C\u00F7\u0053\u0054\u0055\u0056\u0057\u0058\u0059\u005A\u00B2\u00D4\u00D6\u00D2\u00D3\u00D5\u0030\u0031\u0032\u0033\u0034\u0035\u0036\u0037\u0038\u0039\u00B3\u00DB\u00DC\u00D9\u00DA\u009F';
+        const rev={};for(let i=0;i<cp.length;i++)rev[cp[i]]=String.fromCharCode(i);
+        return [...s].map(c=>rev[c]||c).join('');
+    },
+});
+
+// ─── Detect-only utilities ───────────────────────────────────────────────────
+reg('MD5 Hash (detect)', { dec: s => { if(/^[0-9a-f]{32}$/i.test(s.trim())) return 'MD5 hash (one-way)'; throw new Error('Not MD5'); } });
+reg('SHA-1 Hash (detect)', { dec: s => { if(/^[0-9a-f]{40}$/i.test(s.trim())) return 'SHA-1 hash (one-way)'; throw new Error('Not SHA-1'); } });
+reg('SHA-256 Hash (detect)', { dec: s => { if(/^[0-9a-f]{64}$/i.test(s.trim())) return 'SHA-256 hash (one-way)'; throw new Error('Not SHA-256'); } });
+
+// ─── DOM refs ────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const inputEl = $('inputText');
+const container = $('resultsContainer');
+const modeSelect = $('modeSelect');
+const keyInput = $('keyInput');
+const infoBar = $('infoBar');
+const charCount = $('charCount');
+const filterSelect = $('filterSelect');
+
+// Populate filter dropdown
+for(const enc of ENCODINGS) {
+    const opt = document.createElement('option');
+    opt.value = enc.name;
+    opt.textContent = enc.name;
+    filterSelect.appendChild(opt);
+}
+
+function showInfo(msg, type='error') {
+    infoBar.className='info-bar '+type;
+    infoBar.textContent=msg;
+    infoBar.style.display=msg?'block':'none';
+}
+
+// ─── Build result cards ──────────────────────────────────────────────────────
+function buildCards() {
+    container.innerHTML='';
+    const isDecode = modeSelect.value==='decode';
+    const key = keyInput.value;
+    const input = inputEl.value;
+    const filter = filterSelect.value;
+    const isSingle = !!filter;
+    container.className = 'results-grid' + (isSingle ? ' single' : '');
+    const list = filter ? ENCODINGS.filter(e => e.name === filter) : ENCODINGS;
+
+    $('countBadge').textContent=list.length+' encodings';
+
+    for(const enc of list) {
+        const card = document.createElement('div');
+        card.className='result-card';
+
+        const header = document.createElement('div');
+        header.className='card-header';
+        const nameSpan = document.createElement('span');
+        nameSpan.className='name';
+        nameSpan.textContent = enc.name;
+        const actions = document.createElement('div');
+        actions.className='actions';
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = '\u{1F4CB}';
+        copyBtn.title = 'Copy';
+        actions.appendChild(copyBtn);
+        header.appendChild(nameSpan);
+        header.appendChild(actions);
+        card.appendChild(header);
+
+        const valueDiv = document.createElement('div');
+        valueDiv.className='result-value';
+        card.appendChild(valueDiv);
+        container.appendChild(card);
+
+        // Compute result
+        if(input) {
+            const fn = isDecode ? enc.dec : enc.enc;
+            if(fn) {
+                try {
+                    const result = enc.key ? fn(input, key) : fn(input);
+                    const s = result !== undefined && result !== null ? String(result) : '';
+                    valueDiv.textContent = s || '(empty)';
+                    if(s) card.classList.add('success');
+                } catch(e) {
+                    valueDiv.textContent = '\u2716 ' + e.message;
+                    card.classList.add('error');
+                }
+            } else {
+                valueDiv.textContent = '\u2014 not supported';
+            }
+        } else {
+            valueDiv.textContent = '';
+        }
+
+        copyBtn.addEventListener('click', ()=>{
+            const text = valueDiv.textContent;
+            if(!text || text.startsWith('\u2716')) return;
+            navigator.clipboard.writeText(text).then(()=>{
+                const t=$('copyToast');
+                t.classList.add('show');
+                setTimeout(()=>t.classList.remove('show'),1500);
+            });
+        });
+    }
+}
+
+// ─── Events ──────────────────────────────────────────────────────────────────
+function refresh() {
+    charCount.textContent = inputEl.value.length + ' chars';
+    showInfo('');
+    buildCards();
+}
+
+$('goBtn').addEventListener('click', refresh);
+modeSelect.addEventListener('change', refresh);
+keyInput.addEventListener('change', refresh);
+keyInput.addEventListener('input', refresh);
+inputEl.addEventListener('input', refresh);
+filterSelect.addEventListener('change', refresh);
+
+$('clearBtn').addEventListener('click', ()=>{
+    inputEl.value = '';
+    refresh();
+});
+$('pasteBtn').addEventListener('click', async ()=>{
+    try { inputEl.value = await navigator.clipboard.readText(); refresh(); }
+    catch { inputEl.focus(); document.execCommand('paste'); setTimeout(refresh, 50); }
+});
+
+// Also run on initial load with placeholder
+refresh();
+</script>
+</body>
+</html>

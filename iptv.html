@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشغل IPTV متقدم مع المفضلة</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root {
+            --primary-bg: #1a1a1d;
+            --secondary-bg: #2d2d34;
+            --modal-bg: #3c3c44;
+            --text-color: #f0f0f0;
+            --accent-color: #4a90e2;
+            --danger-color: #e24a4a;
+            --border-color: #444;
+            --group-header-bg: #333842;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* يمنع التمرير على مستوى الصفحة الرئيسية */
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background-color: var(--secondary-bg);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        .header select {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            font-size: 16px;
+        }
+        .header button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            white-space: nowrap;
+        }
+        .header button:hover { background-color: #357abd; }
+        .main-container { display: flex; flex-grow: 1; overflow: hidden; }
+        #video-container { flex-grow: 1; display: flex; background-color: #000; min-height: 250px; }
+        video { width: 100%; height: 100%; object-fit: contain; background-color: #000; }
+        #playlist-wrapper {
+            width: 350px;
+            background-color: var(--secondary-bg);
+            border-left: 2px solid var(--border-color);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #search-container {
+            padding: 10px;
+            background-color: var(--group-header-bg);
+        }
+        #search-box {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+        }
+        #playlist-container {
+            overflow-y: auto;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+            flex-grow: 1;
+        }
+        #playlist-container .channel-group summary {
+            padding: 15px;
+            font-weight: bold;
+            background-color: var(--group-header-bg);
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+        }
+        #playlist-container .channel-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+         #playlist-container .channel-item .channel-info {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+        }
+        #playlist-container .channel-item img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+        #playlist-container .channel-item:hover { background-color: var(--accent-color); }
+        #playlist-container .channel-item.active { background-color: #357abd; font-weight: bold; }
+        .loader { text-align: center; padding: 20px; }
+
+        .fav-toggle {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 0 5px;
+            margin-left: auto;
+            order: 3;
+        }
+        .fav-toggle:hover { color: #ffc107; }
+        .fav-toggle.favorited { color: #ffc107; }
+        .channel-item.dragging {
+            opacity: 0.5;
+            background: var(--accent-color);
+        }
+
+        /* -- Modal Styles -- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+        .modal-overlay.visible { opacity: 1; visibility: visible; }
+        .modal { background: var(--modal-bg); padding: 25px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .modal h2 { margin-top: 0; text-align: center; }
+        .modal .form-group { margin-bottom: 20px; }
+        .modal label { margin-bottom: 8px; display: block; font-weight: bold; }
+        .modal input[type="text"], .modal input[type="url"] { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); background-color: var(--secondary-bg); color: var(--text-color); font-size: 16px; box-sizing: border-box; }
+        .modal .url-input-group { display: flex; gap: 5px; }
+        .modal .url-input-group input { flex-grow: 1; }
+        .modal .modal-actions { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .modal .modal-actions button { padding: 10px 25px; font-size: 16px; }
+        .source-chooser { display: flex; gap: 10px; margin-bottom: 20px; background-color: var(--secondary-bg); border-radius: 8px; padding: 5px; }
+        .source-chooser input { display: none; }
+        .source-chooser label { flex: 1; text-align: center; padding: 10px; border-radius: 6px; cursor: pointer; transition: all 0.3s; }
+        .source-chooser input:checked + label { background-color: var(--accent-color); color: white; }
+        .hidden { display: none; }
+        input[type="file"] { display: none; }
+        .file-upload-label { display: block; padding: 10px; background-color: var(--secondary-bg); border: 1px dashed var(--border-color); border-radius: 5px; text-align: center; cursor: pointer; }
+        .file-upload-label:hover { border-color: var(--accent-color); }
+        #file-name-display { margin-top: 10px; color: #ccc; font-style: italic; text-align: center; }
+        .saved-playlists { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+        .saved-playlists li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); }
+        .saved-playlists li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .saved-playlists li .actions { flex-shrink: 0; }
+        .saved-playlists li .actions button { background: none; border: none; cursor: pointer; padding: 5px 10px; }
+        .saved-playlists li .actions button:disabled { color: var(--border-color); cursor: not-allowed; }
+        .saved-playlists li .actions button.edit { color: var(--accent-color); }
+        .saved-playlists li .actions button.delete { color: var(--danger-color); }
+        
+        @media (max-width: 768px) {
+            .header { flex-wrap: wrap; justify-content: center; }
+            .main-container { flex-direction: column; }
+            #video-container { height: 40vh; flex-grow: 0; }
+            #playlist-wrapper { width: 100%; height: 60vh; border-left: none; border-top: 2px solid var(--border-color); }
+            #playlist-container .channel-item { padding: 10px 15px; }
+            .modal { padding: 15px; }
+            .modal h2 { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <select id="playlist-select"></select>
+        <button id="manage-btn">إدارة القوائم</button>
+    </div>
+
+    <div class="main-container">
+        <div id="video-container"><video id="iptv-player" controls autoplay></video></div>
+        <div id="playlist-wrapper">
+            <div id="search-container">
+                <input type="search" id="search-box" placeholder="ابحث عن قناة...">
+            </div>
+            <div id="playlist-container"><div class="loader" id="loader">جارٍ التحميل...</div></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="manager-modal-overlay">
+        <div class="modal">
+            <h2>إدارة قوائم التشغيل</h2>
+            <ul class="saved-playlists" id="saved-playlists-list"></ul>
+            <div class="modal-actions">
+                <button id="add-new-playlist-btn">إضافة قائمة جديدة</button>
+                <button id="close-manager-modal-btn">إغلاق</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="edit-modal-overlay">
+        <div class="modal">
+            <h2 id="edit-modal-title">إضافة قائمة جديدة</h2>
+            <form id="playlist-form" novalidate>
+                <input type="hidden" id="playlist-id">
+                <div class="form-group">
+                    <label for="playlist-name">اسم القائمة</label>
+                    <input type="text" id="playlist-name" required>
+                </div>
+                <div class="source-chooser">
+                    <input type="radio" id="source-url" name="source-type" value="url" checked>
+                    <label for="source-url">رابط</label>
+                    <input type="radio" id="source-file" name="source-type" value="file">
+                    <label for="source-file">ملف</label>
+                </div>
+                <div class="form-group" id="url-input-container">
+                    <label for="playlist-url">رابط ملف M3U</label>
+                    <div class="url-input-group">
+                        <input type="url" id="playlist-url" placeholder="https://example.com/playlist.m3u">
+                        <button type="button" id="paste-btn">لصق</button>
+                    </div>
+                </div>
+                <div class="form-group hidden" id="file-input-container">
+                    <label for="playlist-file-input">اختر ملف M3U</label>
+                    <input type="file" id="playlist-file-input" accept=".m3u,.m3u8">
+                    <label for="playlist-file-input" class="file-upload-label">انقر هنا لاختيار ملف</label>
+                    <div id="file-name-display">لم يتم اختيار أي ملف</div>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit">حفظ</button>
+                    <button type="button" id="cancel-edit-modal-btn">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const playlistSelect = document.getElementById('playlist-select');
+        const manageBtn = document.getElementById('manage-btn');
+        const videoPlayer = document.getElementById('iptv-player');
+        const playlistContainer = document.getElementById('playlist-container');
+        const loader = document.getElementById('loader');
+        const searchBox = document.getElementById('search-box');
+        
+        const managerModal = document.getElementById('manager-modal-overlay');
+        const savedPlaylistsList = document.getElementById('saved-playlists-list');
+        const addNewPlaylistBtn = document.getElementById('add-new-playlist-btn');
+        const closeManagerModalBtn = document.getElementById('close-manager-modal-btn');
+        
+        const editModal = document.getElementById('edit-modal-overlay');
+        const editModalTitle = document.getElementById('edit-modal-title');
+        const playlistForm = document.getElementById('playlist-form');
+        const playlistIdInput = document.getElementById('playlist-id');
+        const playlistNameInput = document.getElementById('playlist-name');
+        const cancelEditModalBtn = document.getElementById('cancel-edit-modal-btn');
+        const pasteBtn = document.getElementById('paste-btn');
+        
+        const sourceUrlRadio = document.getElementById('source-url');
+        const sourceFileRadio = document.getElementById('source-file');
+        const urlInputContainer = document.getElementById('url-input-container');
+        const fileInputContainer = document.getElementById('file-input-container');
+        const playlistUrlInput = document.getElementById('playlist-url');
+        const playlistFileInput = document.getElementById('playlist-file-input');
+        const fileNameDisplay = document.getElementById('file-name-display');
+
+        let hls = null;
+        let playlists = [];
+        let favorites = [];
+        let currentChannels = []; 
+
+        // --- Storage Management ---
+        const getPlaylistsFromStorage = () => JSON.parse(localStorage.getItem('iptv_playlists_v6')) || [];
+        const savePlaylistsToStorage = () => localStorage.setItem('iptv_playlists_v6', JSON.stringify(playlists));
+        const getFavoritesFromStorage = () => JSON.parse(localStorage.getItem('iptv_favorites_v1')) || [];
+        const saveFavoritesToStorage = () => localStorage.setItem('iptv_favorites_v1', JSON.stringify(favorites));
+
+        const openModal = (modal) => modal.classList.add('visible');
+        const closeModal = (modal) => modal.classList.remove('visible');
+
+        const parseM3U = (m3uText) => {
+            const lines = m3uText.replace(/\r/g, "").split('\n');
+            const playlist = [];
+            const regex = /#EXTINF:-1(?: tvg-id="([^"]*)")?(?: tvg-logo="([^"]*)")?(?: group-title="([^"]*)")?,(.*)/;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('#EXTINF:')) {
+                    const match = line.match(regex);
+                    if (match) {
+                        const [, , logo, group, name] = match;
+                        let urlLine = '';
+                        for (let j = i + 1; j < lines.length; j++) {
+                            const nextLine = lines[j].trim();
+                            if (nextLine && !nextLine.startsWith('#')) {
+                                urlLine = nextLine;
+                                i = j;
+                                break;
+                            }
+                        }
+                        if (name && urlLine) {
+                            playlist.push({ name: name.trim(), url: urlLine, logo: logo || '', group: group || 'غير مصنف' });
+                        }
+                    }
+                }
+            }
+            return playlist;
+        };
+        
+        const toggleFavorite = (channelData, buttonElement) => {
+            const index = favorites.findIndex(fav => fav.url === channelData.url);
+            if (index > -1) {
+                favorites.splice(index, 1);
+                buttonElement.classList.remove('favorited');
+                buttonElement.textContent = '☆';
+            } else {
+                favorites.push(channelData);
+                buttonElement.classList.add('favorited');
+                buttonElement.textContent = '★';
+            }
+            saveFavoritesToStorage();
+        };
+
+        const createChannelElement = (item, isFavoriteList = false) => {
+            const div = document.createElement('div');
+            div.className = 'channel-item';
+            div.dataset.url = item.url;
+
+            const isFavorited = favorites.some(fav => fav.url === item.url);
+
+            const img = document.createElement('img');
+            img.src = item.logo || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+            img.onerror = () => { img.style.display = 'none'; };
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'channel-info';
+            infoDiv.textContent = item.name;
+
+            const favButton = document.createElement('button');
+            favButton.className = 'fav-toggle';
+            favButton.textContent = isFavorited ? '★' : '☆';
+            if (isFavorited) favButton.classList.add('favorited');
+            
+            favButton.onclick = (e) => {
+                e.stopPropagation();
+                toggleFavorite(item, favButton);
+                if (isFavoriteList) {
+                    div.remove();
+                    currentChannels = currentChannels.filter(c => c.url !== item.url);
+                }
+            };
+
+            div.appendChild(img);
+            div.appendChild(infoDiv);
+            div.appendChild(favButton);
+
+            if (isFavoriteList) {
+                div.draggable = true;
+            }
+            return div;
+        };
+        
+        const displayFavoritesList = () => {
+            playlistContainer.innerHTML = '';
+            currentChannels = [...favorites];
+            if (favorites.length === 0) {
+                playlistContainer.innerHTML = `<div style="padding: 15px; cursor:default;">قائمة المفضلة فارغة.</div>`;
+                return;
+            }
+            favorites.forEach(item => {
+                playlistContainer.appendChild(createChannelElement(item, true));
+            });
+        };
+
+        const displayChannelList = (channelList) => {
+            playlistContainer.innerHTML = '';
+            if (searchBox.value.trim() === '') {
+                currentChannels = channelList;
+            }
+            if (!channelList || channelList.length === 0) {
+                playlistContainer.innerHTML = `<div style="padding: 15px; cursor:default;">لم يتم العثور على قنوات.</div>`;
+                return;
+            }
+            const groupedChannels = channelList.reduce((acc, channel) => {
+                const group = channel.group;
+                if (!acc[group]) acc[group] = [];
+                acc[group].push(channel);
+                return acc;
+            }, {});
+            const fragment = document.createDocumentFragment();
+            for (const group in groupedChannels) {
+                const details = document.createElement('details');
+                details.className = 'channel-group';
+                details.open = false;
+                const summary = document.createElement('summary');
+                summary.textContent = group;
+                details.appendChild(summary);
+                groupedChannels[group].forEach(item => {
+                    details.appendChild(createChannelElement(item, false));
+                });
+                fragment.appendChild(details);
+            }
+            playlistContainer.appendChild(fragment);
+        };
+
+        const playChannel = (url) => {
+            if (hls) hls.destroy();
+            if (Hls.isSupported()) {
+                hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(videoPlayer);
+            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                videoPlayer.src = url;
+            }
+            videoPlayer.play().catch(e => console.error("Autoplay failed:", e));
+        };
+        
+        async function loadSelectedPlaylist() {
+            const selectedValue = playlistSelect.value;
+            if (!selectedValue) {
+                playlistContainer.innerHTML = '<div style="padding:15px">اختر قائمة لعرضها.</div>';
+                return;
+            }
+            playlistContainer.innerHTML = '';
+            loader.style.display = 'block';
+            searchBox.value = '';
+            if (selectedValue === 'favorites') {
+                displayFavoritesList();
+                loader.style.display = 'none';
+                return;
+            }
+            try {
+                let m3uText;
+                const response = await fetch(selectedValue);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                m3uText = await response.text();
+                displayChannelList(parseM3U(m3uText));
+            } catch (error) {
+                console.error('Error loading M3U:', error);
+                playlistContainer.innerHTML = `<div style="padding:15px; color: var(--danger-color); cursor:default;">فشل تحميل القائمة.</div>`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+        
+        const populatePlaylistSelect = () => {
+            const lastSelectedUrl = playlistSelect.value;
+            playlistSelect.innerHTML = '';
+            const favOption = document.createElement('option');
+            favOption.value = 'favorites';
+            favOption.textContent = '⭐ المفضلة';
+            playlistSelect.appendChild(favOption);
+            if (playlists.length > 0) {
+                playlists.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.url;
+                    option.textContent = p.name;
+                    playlistSelect.appendChild(option);
+                });
+            }
+            if (playlists.some(p => p.url === lastSelectedUrl) || lastSelectedUrl === 'favorites') {
+                playlistSelect.value = lastSelectedUrl;
+            } else {
+                playlistSelect.value = 'favorites';
+            }
+        };
+        
+        function renderManagerList() {
+            savedPlaylistsList.innerHTML = '';
+            if (playlists.length === 0) {
+                 savedPlaylistsList.innerHTML = `<li>لا توجد قوائم محفوظة.</li>`;
+                 return;
+            }
+            playlists.forEach(p => {
+                const li = document.createElement('li');
+                const isFile = p.url.startsWith('data:');
+                li.innerHTML = `
+                    <span>${p.name} ${isFile ? '(ملف)' : ''}</span>
+                    <div class="actions">
+                        <button class="edit" data-id="${p.id}" ${isFile ? 'disabled title="لا يمكن تعديل الملفات المرفوعة"' : ''}>تعديل</button>
+                        <button class="delete" data-id="${p.id}">حذف</button>
+                    </div>`;
+                savedPlaylistsList.appendChild(li);
+            });
+        }
+        
+        function handleManagerClick(e) {
+            const target = e.target;
+            const id = target.dataset.id;
+            if (target.classList.contains('edit')) {
+                const playlist = playlists.find(p => p.id == id);
+                if (!playlist) return;
+                playlistForm.reset();
+                editModalTitle.textContent = 'تعديل القائمة';
+                playlistIdInput.value = playlist.id;
+                playlistNameInput.value = playlist.name;
+                playlistUrlInput.value = playlist.url;
+                sourceUrlRadio.checked = true;
+                sourceUrlRadio.dispatchEvent(new Event('change'));
+                document.querySelector('.source-chooser').classList.add('hidden');
+                openModal(editModal);
+            }
+            if (target.classList.contains('delete')) {
+                if (confirm('هل أنت متأكد من حذف هذه القائمة؟')) {
+                    playlists = playlists.filter(p => p.id != id);
+                    savePlaylistsToStorage();
+                    populatePlaylistSelect();
+                    renderManagerList();
+                }
+            }
+        }
+        
+        const readFileAsDataURL = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        };
+        
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const id = playlistIdInput.value;
+            const name = playlistNameInput.value.trim();
+            const sourceType = document.querySelector('input[name="source-type"]:checked').value;
+            if (!name) { alert('الرجاء إدخال اسم للقائمة.'); return; }
+            
+            let url = '';
+            if (id) {
+                url = playlistUrlInput.value.trim();
+                if (!url) { alert('الرجاء إدخال رابط القائمة.'); return; }
+            } else {
+                if (sourceType === 'url') {
+                    url = playlistUrlInput.value.trim();
+                    if (!url) { alert('الرجاء إدخال رابط القائمة.'); return; }
+                } else {
+                    const file = playlistFileInput.files[0];
+                    if (!file) { alert('الرجاء اختيار ملف.'); return; }
+                    url = await readFileAsDataURL(file).catch(err => alert("خطأ في قراءة الملف."));
+                    if (!url) return;
+                }
+            }
+            if (id) {
+                const index = playlists.findIndex(p => p.id == id);
+                if (index > -1) playlists[index] = { ...playlists[index], name, url };
+            } else {
+                playlists.push({ id: Date.now(), name, url });
+            }
+            
+            savePlaylistsToStorage();
+            populatePlaylistSelect();
+            playlistSelect.value = url;
+            closeModal(editModal);
+        }
+
+        // --- Event Listeners ---
+        playlistSelect.addEventListener('change', loadSelectedPlaylist);
+
+        playlistContainer.addEventListener('click', (e) => {
+            const channelItem = e.target.closest('.channel-item');
+            if (channelItem && !e.target.classList.contains('fav-toggle')) {
+                const url = channelItem.dataset.url;
+                playChannel(url);
+                document.querySelectorAll('#playlist-container .channel-item').forEach(el => el.classList.remove('active'));
+                channelItem.classList.add('active');
+            }
+        });
+
+        let draggedItem = null;
+        playlistContainer.addEventListener('dragstart', (e) => {
+            if (playlistSelect.value !== 'favorites') return;
+            draggedItem = e.target.closest('.channel-item');
+            setTimeout(() => {
+                if (draggedItem) draggedItem.classList.add('dragging');
+            }, 0);
+        });
+
+        playlistContainer.addEventListener('dragend', () => {
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            }
+        });
+
+        playlistContainer.addEventListener('dragover', (e) => {
+            if (playlistSelect.value !== 'favorites' || !draggedItem) return;
+            e.preventDefault();
+            const afterElement = getDragAfterElement(playlistContainer, e.clientY);
+            if (afterElement == null) {
+                playlistContainer.appendChild(draggedItem);
+            } else {
+                playlistContainer.insertBefore(draggedItem, afterElement);
+            }
+        });
+
+        playlistContainer.addEventListener('drop', (e) => {
+            if (playlistSelect.value !== 'favorites' || !draggedItem) return;
+            e.preventDefault();
+            draggedItem.classList.remove('dragging');
+            const newOrderUrls = [...playlistContainer.querySelectorAll('.channel-item')].map(item => item.dataset.url);
+            favorites.sort((a, b) => newOrderUrls.indexOf(a.url) - newOrderUrls.indexOf(b.url));
+            saveFavoritesToStorage();
+            draggedItem = null;
+        });
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.channel-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        searchBox.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const isFavoritesActive = playlistSelect.value === 'favorites';
+            const sourceChannels = isFavoritesActive ? favorites : currentChannels;
+            
+            const filteredChannels = searchTerm 
+                ? sourceChannels.filter(channel => 
+                    channel.name.toLowerCase().includes(searchTerm) || 
+                    (channel.group && channel.group.toLowerCase().includes(searchTerm)))
+                : sourceChannels;
+
+            if (isFavoritesActive) {
+                playlistContainer.innerHTML = '';
+                if (filteredChannels.length === 0) {
+                     playlistContainer.innerHTML = `<div style="padding: 15px; cursor:default;">لا توجد نتائج مطابقة.</div>`;
+                } else {
+                    filteredChannels.forEach(ch => playlistContainer.appendChild(createChannelElement(ch, true)));
+                }
+            } else {
+                displayChannelList(filteredChannels);
+            }
+        });
+
+        manageBtn.addEventListener('click', () => { renderManagerList(); openModal(managerModal); });
+        closeManagerModalBtn.addEventListener('click', () => closeModal(managerModal));
+        savedPlaylistsList.addEventListener('click', handleManagerClick);
+        addNewPlaylistBtn.addEventListener('click', () => {
+            playlistForm.reset();
+            editModalTitle.textContent = 'إضافة قائمة جديدة';
+            playlistIdInput.value = '';
+            fileNameDisplay.textContent = 'لم يتم اختيار أي ملف';
+            document.querySelector('.source-chooser').classList.remove('hidden');
+            sourceUrlRadio.checked = true;
+            sourceUrlRadio.dispatchEvent(new Event('change'));
+            openModal(editModal);
+        });
+        cancelEditModalBtn.addEventListener('click', () => closeModal(editModal));
+        playlistForm.addEventListener('submit', handleFormSubmit);
+        sourceUrlRadio.addEventListener('change', () => {
+            urlInputContainer.classList.remove('hidden');
+            fileInputContainer.classList.add('hidden');
+        });
+        sourceFileRadio.addEventListener('change', () => {
+            urlInputContainer.classList.add('hidden');
+            fileInputContainer.classList.remove('hidden');
+        });
+        playlistFileInput.addEventListener('change', () => {
+            const file = playlistFileInput.files[0];
+            fileNameDisplay.textContent = file ? file.name : 'لم يتم اختيار أي ملف';
+        });
+        pasteBtn.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                playlistUrlInput.value = text;
+            } catch (err) { 
+                console.error('Failed to read clipboard contents: ', err);
+                alert('فشل لصق الرابط. قد تحتاج إلى السماح للمتصفح بالوصول إلى الحافظة.');
+            }
+        });
+        managerModal.addEventListener('click', (e) => e.target === managerModal && closeModal(managerModal));
+        editModal.addEventListener('click', (e) => e.target === editModal && closeModal(editModal));
+        
+        function initialize() {
+            playlists = getPlaylistsFromStorage();
+            favorites = getFavoritesFromStorage();
+            populatePlaylistSelect();
+            loadSelectedPlaylist();
+        }
+
+        initialize();
+    });
+    </script>
+</body>
+</html>

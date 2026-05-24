@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Encode-Decode | One Input → Multi Output</title>
+    <style>
+        :root {
+            --bg: #0f0f1a;
+            --panel: #1a1a2e;
+            --border: #2a2a4a;
+            --text: #e0e0ff;
+            --muted: #8888aa;
+            --accent: #00d4ff;
+            --accent2: #ff6b6b;
+            --accent3: #4ecdc4;
+            --accent4: #ffe66d;
+            --accent5: #a78bfa;
+            --accent6: #f093fb;
+            --ok: #00ff88;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, var(--accent), var(--accent3), var(--accent4));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+        .input-section {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .input-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .mode-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--bg);
+            padding: 4px;
+            border-radius: 10px;
+        }
+        .mode-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background: var(--accent);
+            color: var(--bg);
+            font-weight: 600;
+        }
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text);
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.95rem;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        textarea:focus { border-color: var(--accent); }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        .stats span { display: flex; align-items: center; gap: 6px; }
+        .outputs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 16px;
+        }
+        .output-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .output-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--card-accent, var(--accent));
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--card-accent, var(--accent));
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--muted);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover {
+            border-color: var(--card-accent, var(--accent));
+            color: var(--card-accent, var(--accent));
+        }
+        .output-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            min-height: 80px;
+            max-height: 200px;
+            overflow: auto;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text);
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+        .output-box.empty {
+            color: var(--muted);
+            font-style: italic;
+        }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--ok);
+            color: var(--bg);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .clear-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .clear-btn:hover {
+            border-color: var(--accent2);
+            color: var(--accent2);
+        }
+        .sample-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .sample-btn:hover {
+            border-color: var(--accent3);
+            color: var(--accent3);
+        }
+        @media (max-width: 600px) {
+            .outputs-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Ultra Encode-Decode</h1>
+        <p class="subtitle">One input → Multiple outputs. Real-time. Client-side. Zero servers.</p>
+
+        <div class="input-section">
+            <div class="input-header">
+                <div class="mode-toggle">
+                    <button class="mode-btn active" onclick="setMode('auto')">🔍 Auto</button>
+                    <button class="mode-btn" onclick="setMode('encode')">🔒 Encode</button>
+                    <button class="mode-btn" onclick="setMode('decode')">🔓 Decode</button>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="sample-btn" onclick="loadSample()">📋 Sample</button>
+                    <button class="clear-btn" onclick="clearAll()">🗑️ Clear</button>
+                </div>
+            </div>
+            <textarea id="input" placeholder="Type or paste text here... All outputs update instantly." oninput="process()"></textarea>
+            <div class="stats">
+                <span>📝 Chars: <b id="charCount">0</b></span>
+                <span>📦 Bytes: <b id="byteCount">0</b></span>
+                <span>🔤 Lines: <b id="lineCount">0</b></span>
+                <span>🎯 Mode: <b id="modeDisplay">Auto-detect</b></span>
+            </div>
+        </div>
+
+        <div class="outputs-grid">
+            <!-- Named Entities -->
+            <div class="output-card" style="--card-accent: var(--accent);">
+                <div class="card-header">
+                    <span class="card-title">🏷️ Named Entities</span>
+                    <div class="card-actions">
+                        <button class="btn-icon" onclick="copy('named')" title="Copy">📋</button>
+                    </div>
+                </div>
+                <div class="output-box empty" id="named">Waiting for input...</div>
+            </div>
+
+            <!-- Decimal Entities -->
+            <div class="output-card" style="--card-accent: var(--accent2);">
+                <div class="card-header">
+                    <span class="card-title">🔢 Decimal (&#38;#60;)</span>
+                    <div class="card-actions">
+                        <button class="btn-icon" onclick="copy('decimal')" title="Copy">📋</button>
+                    </div>
+                </div>
+                <div class="output-box empty" id="decimal">Waiting for input...</div>
+            </div>
+
+            <!-- Hexadecimal Entities -->
+            <div class="output-card" style="--card-accent: var(--accent3);">
+                <div class="card-header">
+                    <span class="card-title">🧪 Hexadecimal (&#38;#x3C;)</span>
+                    <div class="card-actions">
+                        <button class="btn-icon" onclick="copy('hex')" title="Copy">📋</button>
+                    </div>
+                </div>
+                <div class="output-box empty" id="hex">Waiting for input...</div>
+            </div>
+
+            <!-- URL Encoded -->
+            <div class="output-card" style="--card-accent: var(--accent4);">
+                <div class="card-header">
+                    <span class="card-title">🔗 URL Encoded (%3C)</span>
+                    <div class="card-actions">
+                        <button class="btn-icon" onclick="copy('url')" title="Copy">📋</button>
+                    </div>
+                </div>
+                <div class="output-box empty" id="url">Waiting for input...</div>
+            </div>
+
+            <!-- Unicode Escapes -->
+            <div class="output-card" style="--card-accent: var(--accent5);">
+                <div class="card-header">
+                    <span class="card-title">🌐 Unicode Escapes (\u003C)</span>
+                    <div class="card-actions">
+                        <button class="btn-icon" onclick="copy('unicode')" title="Copy">📋</button>
+                    </div>
+                </div>
+                <div class="output-box empty" id="unicode">Waiting for input...</div>
+            </div>
+
+            <!-- Base64 -->
+            <div class="output-card" style="--card-accent: var(--accent6);">
+                <div class="card-header">
+                    <span class="card-title">🔐 Base64</span>
+                    <div class="card-actions">
+                        <button class="btn-icon" onclick="copy('base64')" title="Copy">📋</button>
+                    </div>
+                </div>
+                <div class="output-box empty" id="base64">Waiting for input...</div>
+            </div>
+
+            <!-- JavaScript String -->
+            <div class="output-card" style="--card-accent: #ff9f43;">
+                <div class="card-header">
+                    <span class="card-title">📜 JS String Literal</span>
+                    <div class="card-actions">
+                        <button class="btn-icon" onclick="copy('js')" title="Copy">📋</button>
+                    </div>
+                </div>
+                <div class="output-box empty" id="js">Waiting for input...</div>
+            </div>
+
+            <!-- Decoded / Plain Text -->
+            <div class="output-card" style="--card-accent: var(--ok);">
+                <div class="card-header">
+                    <span class="card-title">✅ Decoded Plain Text</span>
+                    <div class="card-actions">
+                        <button class="btn-icon" onclick="copy('decoded')" title="Copy">📋</button>
+                    </div>
+                </div>
+                <div class="output-box empty" id="decoded">Waiting for input...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">✅ Copied to clipboard!</div>
+
+    <script>
+        let currentMode = 'auto';
+
+        // Named entity map for common characters
+        const namedMap = {
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
+            "'": '&apos;', ' ': '&nbsp;', '©': '&copy;', '®': '&reg;',
+            '™': '&trade;', '€': '&euro;', '£': '&pound;', '¥': '&yen;',
+            '§': '&sect;', '¶': '&para;', '•': '&bull;', '°': '&deg;',
+            '±': '&plusmn;', '×': '&times;', '÷': '&divide;', '¼': '&frac14;',
+            '½': '&frac12;', '¾': '&frac34;', '¹': '&sup1;', '²': '&sup2;',
+            '³': '&sup3;', '¼': '&frac14;', '½': '&frac12;', '¾': '&frac34;',
+            '←': '&larr;', '↑': '&uarr;', '→': '&rarr;', '↓': '&darr;',
+            '↔': '&harr;', '⇐': '&lArr;', '⇑': '&uArr;', '⇒': '&rArr;',
+            '⇓': '&dArr;', '⇔': '&hArr;', '∀': '&forall;', '∂': '&part;',
+            '∃': '&exist;', '∅': '&empty;', '∇': '&nabla;', '∈': '&isin;',
+            '∉': '&notin;', '∋': '&ni;', '∏': '&prod;', '∑': '&sum;',
+            '−': '&minus;', '∗': '&lowast;', '√': '&radic;', '∝': '&prop;',
+            '∞': '&infin;', '∠': '&ang;', '∧': '&and;', '∨': '&or;',
+            '∩': '&cap;', '∪': '&cup;', '∫': '&int;', '∴': '&there4;',
+            '∼': '&sim;', '≅': '&cong;', '≈': '&asymp;', '≠': '&ne;',
+            '≡': '&equiv;', '≤': '&le;', '≥': '&ge;', '⊂': '&sub;',
+            '⊃': '&sup;', '⊄': '&nsub;', '⊆': '&sube;', '⊇': '&supe;',
+            '⊕': '&oplus;', '⊗': '&otimes;', '⊥': '&perp;', '⋅': '&sdot;',
+            '⌈': '&lceil;', '⌉': '&rceil;', '⌊': '&lfloor;', '⌋': '&rfloor;',
+            '⟨': '&lang;', '⟩': '&rang;', '◊': '&loz;', '♠': '&spades;',
+            '♣': '&clubs;', '♥': '&hearts;', '♦': '&diams;'
+        };
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('modeDisplay').textContent = 
+                mode === 'auto' ? 'Auto-detect' : mode === 'encode' ? 'Force Encode' : 'Force Decode';
+            process();
+        }
+
+        function detectMode(text) {
+            if (currentMode !== 'auto') return currentMode;
+            // Detect if input contains HTML entities or encoded patterns
+            const hasEntities = /&[a-zA-Z][a-zA-Z0-9]*;|&#[0-9]+;|&#x[0-9a-fA-F]+;/.test(text);
+            const hasUrlEncoding = /%[0-9a-fA-F]{2}/.test(text);
+            const hasUnicodeEscapes = /\\u[0-9a-fA-F]{4}/.test(text);
+            const hasBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(text) && text.length > 4 && text.length % 4 === 0;
+            
+            if (hasEntities || hasUrlEncoding || hasUnicodeEscapes) return 'decode';
+            return 'encode';
+        }
+
+        function encodeNamed(str) {
+            return str.replace(/[&<<>"' ]|[\u00A0-\u9999<<>\&]/gim, function(i) {
+                return namedMap[i] || '&#' + i.charCodeAt(0) + ';';
+            });
+        }
+
+        function encodeDecimal(str) {
+            return str.replace(/./gs, function(c) {
+                return '&#' + c.codePointAt(0) + ';';
+            });
+        }
+
+        function encodeHex(str) {
+            return str.replace(/./gs, function(c) {
+                return '&#x' + c.codePointAt(0).toString(16).toUpperCase() + ';';
+            });
+        }
+
+        function encodeUrl(str) {
+            return encodeURIComponent(str);
+        }
+
+        function encodeUnicode(str) {
+            return str.replace(/./gs, function(c) {
+                const cp = c.codePointAt(0);
+                if (cp <= 0xFFFF) {
+                    return '\\u' + cp.toString(16).toUpperCase().padStart(4, '0');
+                } else {
+                    const hi = Math.floor((cp - 0x10000) / 0x400) + 0xD800;
+                    const lo = ((cp - 0x10000) % 0x400) + 0xDC00;
+                    return '\\u' + hi.toString(16).toUpperCase().padStart(4, '0') + 
+                           '\\u' + lo.toString(16).toUpperCase().padStart(4, '0');
+                }
+            });
+        }
+
+        function encodeBase64(str) {
+            try {
+                return btoa(unescape(encodeURIComponent(str)));
+            } catch(e) {
+                return 'Error: ' + e.message;
+            }
+        }
+
+        function encodeJS(str) {
+            return JSON.stringify(str);
+        }
+
+        function decodeHtmlEntities(str) {
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = str;
+            return textarea.value;
+        }
+
+        function decodeUrl(str) {
+            try { return decodeURIComponent(str); } catch(e) { return str; }
+        }
+
+        function decodeUnicodeEscapes(str) {
+            return str.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => 
+                String.fromCharCode(parseInt(hex, 16))
+            );
+        }
+
+        function decodeBase64(str) {
+            try {
+                return decodeURIComponent(escape(atob(str)));
+            } catch(e) {
+                return 'Invalid Base64';
+            }
+        }
+
+        function process() {
+            const input = document.getElementById('input').value;
+            const mode = detectMode(input);
+
+            // Update stats
+            document.getElementById('charCount').textContent = input.length;
+            document.getElementById('byteCount').textContent = new Blob([input]).size;
+            document.getElementById('lineCount').textContent = input ? input.split('\n').length : 0;
+
+            if (!input) {
+                document.querySelectorAll('.output-box').forEach(box => {
+                    box.textContent = 'Waiting for input...';
+                    box.classList.add('empty');
+                });
+                return;
+            }
+
+            document.querySelectorAll('.output-box').forEach(box => box.classList.remove('empty'));
+
+            let workingText = input;
+
+            // If decode mode, first decode the input to plain text
+            if (mode === 'decode') {
+                workingText = decodeHtmlEntities(input);
+                workingText = decodeUrl(workingText);
+                workingText = decodeUnicodeEscapes(workingText);
+                // Try base64 if it looks like base64
+                if (/^[A-Za-z0-9+/]*={0,2}$/.test(input) && input.length % 4 === 0) {
+                    const b64decoded = decodeBase64(input);
+                    if (b64decoded !== 'Invalid Base64') workingText = b64decoded;
+                }
+            }
+
+            // Generate all outputs from the working text
+            document.getElementById('named').textContent = encodeNamed(workingText);
+            document.getElementById('decimal').textContent = encodeDecimal(workingText);
+            document.getElementById('hex').textContent = encodeHex(workingText);
+            document.getElementById('url').textContent = encodeUrl(workingText);
+            document.getElementById('unicode').textContent = encodeUnicode(workingText);
+            document.getElementById('base64').textContent = encodeBase64(workingText);
+            document.getElementById('js').textContent = encodeJS(workingText);
+            document.getElementById('decoded').textContent = workingText;
+        }
+
+        function copy(id) {
+            const text = document.getElementById(id).textContent;
+            if (text === 'Waiting for input...') return;
+            navigator.clipboard.writeText(text).then(() => showToast());
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function clearAll() {
+            document.getElementById('input').value = '';
+            process();
+        }
+
+
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for URL params or clipboard
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                // Optional: could auto-paste here, but requires user gesture
+            }
+        });
+    </script>
+</body>
+</html>

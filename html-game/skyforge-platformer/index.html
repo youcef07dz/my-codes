@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deep Run</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="app">
+    <header id="hud">
+      <div class="hud-left">
+        <span id="floorLabel">Floor 1</span>
+        <span id="roomLabel">Room 1/6</span>
+      </div>
+      <div class="hud-center" id="goldDisplay">✦ 0</div>
+      <div class="hud-right">
+        <button id="endTurnBtn" type="button">End Turn</button>
+      </div>
+    </header>
+
+    <section id="playerArea">
+      <div class="stats" id="playerStats">
+        <div class="health-bar">
+          <div class="bar-bg"><div class="bar-fill" id="hpBar"></div></div>
+          <span id="hpText">50/50</span>
+        </div>
+        <div class="resource" id="energyDisplay">⚡ 3</div>
+        <div class="status-row" id="playerStatus"></div>
+        <div class="deck-info" id="deckInfo">Deck: 10 | Discard: 0 | Draw: 5</div>
+      </div>
+    </section>
+
+    <section id="enemyArea"></section>
+
+    <section id="cardArea">
+      <div id="hand"></div>
+    </section>
+
+    <div id="overlay">
+      <div class="panel" id="panel"></div>
+    </div>
+
+    <div id="combatLog"></div>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>

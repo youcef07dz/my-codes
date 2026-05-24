@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tkinter Visual Studio</title>
+    <style>
+        :root {
+            --bg-dark: #1e1e1e;
+            --panel-bg: #252526;
+            --accent: #007acc;
+            --text: #cccccc;
+            --border: #3c3c3c;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        header {
+            height: 45px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 200px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--border);
+            padding: 15px;
+        }
+
+        .component-item {
+            background: #333;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: grab;
+            text-align: center;
+            border: 1px solid transparent;
+            transition: 0.2s;
+            user-select: none;
+        }
+
+        .component-item:hover {
+            border-color: var(--accent);
+            background: #3d3d3d;
+        }
+
+        /* Canvas Area */
+        .canvas-area {
+            flex: 1;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: auto;
+            padding: 50px;
+        }
+
+        #canvas {
+            width: 600px;
+            height: 400px;
+            background: #f0f0f0; /* Default Tkinter gray-ish */
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Property Panel */
+        .properties {
+            width: 280px;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--border);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .prop-group {
+            margin-bottom: 15px;
+        }
+
+        label { display: block; font-size: 12px; margin-bottom: 5px; color: #888; }
+        input, select, textarea {
+            width: 100%;
+            background: #3c3c3c;
+            border: 1px solid var(--border);
+            color: white;
+            padding: 5px;
+            box-sizing: border-box;
+            border-radius: 2px;
+        }
+
+        /* Draggable Widgets on Canvas */
+        .widget {
+            position: absolute;
+            cursor: move;
+            border: 1px dashed transparent;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: black;
+            box-sizing: border-box;
+        }
+
+        .widget.selected {
+            border: 1px solid var(--accent);
+            outline: 1px solid var(--accent);
+        }
+
+        /* Button styling for specific widgets */
+        .widget-button { background: #e1e1e1; border: 1px solid #adadad; border-radius: 2px; }
+        .widget-label { background: transparent; }
+        .widget-entry { background: white; border: 1px solid #7a7a7a; }
+
+        /* Code Window */
+        #code-output {
+            position: fixed;
+            bottom: 20px;
+            right: 320px;
+            width: 400px;
+            height: 200px;
+            background: #1e1e1e;
+            border: 1px solid var(--border);
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            padding: 10px;
+            display: none;
+            z-index: 100;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .btn:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <div style="font-weight: bold; color: var(--accent);">TKINTER DESIGNER PRO</div>
+        <div>
+            <button class="btn" onclick="toggleCode()">View Python Code</button>
+            <button class="btn" onclick="exportCode()" style="background: #28a745;">Export .py</button>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="sidebar">
+            <h4 style="margin-top:0">Components</h4>
+            <div class="component-item" draggable="true" ondragstart="onDragStart(event, 'Button')">Button</div>
+            <div class="component-item" draggable="true" ondragstart="onDragStart(event, 'Label')">Label</div>
+            <div class="component-item" draggable="true" ondragstart="onDragStart(event, 'Entry')">Entry (Input)</div>
+            <div class="component-item" draggable="true" ondragstart="onDragStart(event, 'Checkbutton')">Checkbutton</div>
+        </div>
+
+        <div class="canvas-area">
+            <div id="canvas" ondrop="onDrop(event)" ondragover="allowDrop(event)">
+                </div>
+        </div>
+
+        <div class="properties" id="prop-panel">
+            <h4 style="margin-top:0">Properties</h4>
+            <div id="no-selection" style="color:#666; font-style: italic;">Select a component to edit</div>
+            
+            <div id="editor-fields" style="display:none;">
+                <div class="prop-group">
+                    <label>Variable Name</label>
+                    <input type="text" id="prop-var" oninput="updateWidget()">
+                </div>
+                <div class="prop-group">
+                    <label>Text Content</label>
+                    <input type="text" id="prop-text" oninput="updateWidget()">
+                </div>
+                <div class="prop-group">
+                    <label>Command (Python function)</label>
+                    <input type="text" id="prop-cmd" placeholder="e.g. my_func" oninput="updateWidget()">
+                </div>
+                <div class="prop-group" style="display: flex; gap: 10px;">
+                    <div>
+                        <label>X</label>
+                        <input type="number" id="prop-x" oninput="updateWidget()">
+                    </div>
+                    <div>
+                        <label>Y</label>
+                        <input type="number" id="prop-y" oninput="updateWidget()">
+                    </div>
+                </div>
+                <button class="btn" style="background: #dc3545; width: 100%; margin-top: 20px;" onclick="deleteWidget()">Delete Component</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<textarea id="code-output" readonly></textarea>
+
+<script>
+    let widgets = [];
+    let selectedId = null;
+    let counter = 0;
+
+    function onDragStart(event, type) {
+        event.dataTransfer.setData("type", type);
+    }
+
+    function allowDrop(event) {
+        event.preventDefault();
+    }
+
+    function onDrop(event) {
+        event.preventDefault();
+        const type = event.dataTransfer.getData("type");
+        const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+        
+        const x = event.clientX - canvasRect.left;
+        const y = event.clientY - canvasRect.top;
+
+        const id = 'widget_' + counter++;
+        const newWidget = {
+            id: id,
+            type: type,
+            text: type,
+            varName: `${type.toLowerCase()}_${counter}`,
+            command: '',
+            x: Math.round(x),
+            y: Math.round(y),
+            width: type === 'Button' ? 100 : 120,
+            height: type === 'Button' ? 30 : 25
+        };
+
+        widgets.push(newWidget);
+        render();
+        selectWidget(id);
+    }
+
+    function render() {
+        const canvas = document.getElementById('canvas');
+        canvas.innerHTML = '';
+        
+        widgets.forEach(w => {
+            const el = document.createElement('div');
+            el.id = w.id;
+            el.className = `widget widget-${w.type.toLowerCase()} ${selectedId === w.id ? 'selected' : ''}`;
+            el.style.left = w.x + 'px';
+            el.style.top = w.y + 'px';
+            el.style.width = w.width + 'px';
+            el.style.height = w.height + 'px';
+            el.innerText = w.text;
+            
+            // Basic mouse dragging for moving components on canvas
+            el.onmousedown = function(e) {
+                selectWidget(w.id);
+                let shiftX = e.clientX - el.getBoundingClientRect().left;
+                let shiftY = e.clientY - el.getBoundingClientRect().top;
+
+                function moveAt(pageX, pageY) {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    let newX = pageX - canvasRect.left - shiftX;
+                    let newY = pageY - canvasRect.top - shiftY;
+                    
+                    w.x = Math.round(newX);
+                    w.y = Math.round(newY);
+                    el.style.left = w.x + 'px';
+                    el.style.top = w.y + 'px';
+                    updatePropertyPanel();
+                    generateTkinterCode();
+                }
+
+                function onMouseMove(e) { moveAt(e.pageX, e.pageY); }
+                document.addEventListener('mousemove', onMouseMove);
+                el.onmouseup = function() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    el.onmouseup = null;
+                };
+            };
+            
+            canvas.appendChild(el);
+        });
+        generateTkinterCode();
+    }
+
+    function selectWidget(id) {
+        selectedId = id;
+        const w = widgets.find(x => x.id === id);
+        
+        document.getElementById('no-selection').style.display = 'none';
+        document.getElementById('editor-fields').style.display = 'block';
+        
+        updatePropertyPanel();
+        
+        // Refresh render to show highlight
+        const all = document.querySelectorAll('.widget');
+        all.forEach(el => el.classList.remove('selected'));
+        document.getElementById(id).classList.add('selected');
+    }
+
+    function updatePropertyPanel() {
+        const w = widgets.find(x => x.id === selectedId);
+        if (!w) return;
+        document.getElementById('prop-var').value = w.varName;
+        document.getElementById('prop-text').value = w.text;
+        document.getElementById('prop-cmd').value = w.command;
+        document.getElementById('prop-x').value = w.x;
+        document.getElementById('prop-y').value = w.y;
+    }
+
+    function updateWidget() {
+        const w = widgets.find(x => x.id === selectedId);
+        if (!w) return;
+        w.varName = document.getElementById('prop-var').value;
+        w.text = document.getElementById('prop-text').value;
+        w.command = document.getElementById('prop-cmd').value;
+        w.x = parseInt(document.getElementById('prop-x').value);
+        w.y = parseInt(document.getElementById('prop-y').value);
+        
+        const el = document.getElementById(w.id);
+        el.innerText = w.text;
+        el.style.left = w.x + 'px';
+        el.style.top = w.y + 'px';
+        generateTkinterCode();
+    }
+
+    function deleteWidget() {
+        widgets = widgets.filter(x => x.id !== selectedId);
+        selectedId = null;
+        document.getElementById('editor-fields').style.display = 'none';
+        document.getElementById('no-selection').style.display = 'block';
+        render();
+    }
+
+    function generateTkinterCode() {
+        let code = `import tkinter as tk\nfrom tkinter import messagebox\n\nclass App:\n    def __init__(self, root):\n        root.title("Tkinter Design")\n        root.geometry("600x400")\n\n`;
+        
+        widgets.forEach(w => {
+            if (w.type === 'Button') {
+                code += `        self.${w.varName} = tk.Button(root, text="${w.text}", command=self.${w.command || 'placeholder_cmd'})\n`;
+            } else if (w.type === 'Label') {
+                code += `        self.${w.varName} = tk.Label(root, text="${w.text}")\n`;
+            } else if (w.type === 'Entry') {
+                code += `        self.${w.varName} = tk.Entry(root)\n`;
+            } else if (w.type === 'Checkbutton') {
+                code += `        self.${w.varName} = tk.Checkbutton(root, text="${w.text}")\n`;
+            }
+            code += `        self.${w.varName}.place(x=${w.x}, y=${w.y})\n\n`;
+        });
+
+        code += `    def placeholder_cmd(self):\n        print("Button clicked!")\n\nif __name__ == "__main__":\n    root = tk.Tk()\n    app = App(root)\n    root.mainloop()`;
+        
+        document.getElementById('code-output').value = code;
+    }
+
+    function toggleCode() {
+        const out = document.getElementById('code-output');
+        out.style.display = out.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function exportCode() {
+        const code = document.getElementById('code-output').value;
+        const blob = new Blob([code], {type: 'text/plain'});
+        const anchor = document.createElement('a');
+        anchor.download = "tkinter_gui.py";
+        anchor.href = (window.webkitURL || window.URL).createObjectURL(blob);
+        anchor.dataset.downloadurl = ['text/plain', anchor.download, anchor.href].join(':');
+        anchor.click();
+    }
+</script>
+
+</body>
+</html>
