@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Dino Run</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="top-bar">
+            <div class="stats-display">
+                <div class="score-box-ui">
+                    <span class="label">SCORE</span>
+                    <span class="current-score">0</span>
+                </div>
+                <div class="speed-box-ui">
+                    <span class="label">SPEED</span>
+                    <span class="current-speed">1.0x</span>
+                </div>
+            </div>
+            <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
+        </div>
+        
+        <canvas id="game"></canvas>
+        
+        <div class="start-screen" id="startScreen">
+            <div class="start-content">
+                <h1>🦖 Dino Run</h1>
+                <div class="instructions">
+                    <p>← → or A/D to move</p>
+                    <p>Space/↑ or tap to jump</p>
+                    <p>Avoid cacti & birds!</p>
+                </div>
+                <button class="start-btn" onclick="startGame()">START GAME</button>
+            </div>
+        </div>
+        
+        <div class="game-over" id="gameOver">
+            <div class="game-over-content">
+                <h2>GAME OVER</h2>
+                <div class="score-box">
+                    <div class="score-line">
+                        <span>Score</span>
+                        <span id="finalScore" class="number">0</span>
+                    </div>
+                    <div class="score-line best">
+                        <span>Best</span>
+                        <span id="finalBest" class="number">0</span>
+                    </div>
+                </div>
+                <button class="restart-btn" onclick="resetGame()">
+                    <span>↻</span> Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mobile-controls" id="mobileControls" style="display: none;">
+        <button class="control-btn left" id="leftBtn">←</button>
+        <button class="control-btn jump" id="jumpBtn">↑</button>
+        <button class="control-btn right" id="rightBtn">→</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

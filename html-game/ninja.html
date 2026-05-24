@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>NEON BOUNCE: ULTIMATE</title>
+    <style>
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-pink: #ff007b;
+            --bg: #050508;
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background: var(--bg); 
+            color: #fff; 
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden; 
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+
+        canvas { width: 100%; height: 100%; display: block; }
+
+        /* UI STRATA */
+        .ui-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #hud {
+            padding: env(safe-area-inset-top, 20px) 20px 0;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            pointer-events: all;
+            transition: opacity 0.5s;
+        }
+
+        .hidden { opacity: 0; pointer-events: none; }
+
+        /* TYPOGRAPHY */
+        h1 { 
+            font-size: 3.5rem; 
+            color: var(--neon-blue); 
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 0 15px var(--neon-blue));
+        }
+
+        .score-display { font-size: 1.5rem; color: var(--neon-pink); margin-bottom: 2rem; }
+
+        /* BUTTONS */
+        .btn {
+            padding: 18px 45px;
+            border: 2px solid var(--neon-blue);
+            background: transparent;
+            color: var(--neon-blue);
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 242, 255, 0.4), transparent);
+            transition: 0.5s;
+        }
+
+        .btn:active { transform: scale(0.9); background: var(--neon-blue); color: #000; }
+        .btn:active::after { left: 100%; }
+
+        /* ANIMATIONS */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .pulse { animation: pulse 2s infinite; }
+    </style>
+</head>
+<body>
+
+    <div id="game-wrapper">
+        <div class="ui-layer">
+            <div id="hud">
+                <div>SCORE: <span id="ui-score">0</span></div>
+                <div>BEST: <span id="ui-best">0</span></div>
+            </div>
+
+            <div id="screen-main" class="screen">
+                <h1 class="pulse">NEON</h1>
+                <h1 class="pulse" style="color:var(--neon-pink); filter: drop-shadow(0 0 15px var(--neon-pink));">BOUNCE</h1>
+                <p style="margin-bottom: 30px; opacity: 0.7;">TAP TO DEFY GRAVITY</p>
+                <button class="btn" onclick="Engine.start()">Initialize</button>
+            </div>
+
+            <div id="screen-over" class="screen hidden">
+                <h2 style="font-size: 2rem; margin-bottom: 10px;">REBOOT REQUIRED</h2>
+                <div id="final-score" class="score-display">0</div>
+                <button class="btn" onclick="Engine.start()">Retry</button>
+            </div>
+        </div>
+        <canvas id="stage"></canvas>
+    </div>
+
+<script>
+/**
+ * PRODUCTION GRADE GAME ENGINE
+ * Modular, High-Performance, Mobile-First
+ */
+
+const Engine = (() => {
+    // --- STATE & CONFIG ---
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    
+    let width, height;
+    let isRunning = false;
+    let score = 0;
+    let highScore = localStorage.getItem('nb_pro_best') || 0;
+    
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const player = {
+        x: 0, y: 0, w: 35, h: 35,
+        vy: 0, gravity: 0.5, jump: -9,
+        angle: 0,
+        color: '#00f2ff'
+    };
+
+    let obstacles = [];
+    let particles = [];
+    let frame = 0;
+
+    // --- AUDIO SYNTHESIS ---
+    const playSfx = (freq, type, dur, vol = 0.1) => {
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + dur);
+        } catch(e) {}
+    };
+
+    // --- PARTICLE SYSTEM ---
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x; this.y = y;
+            this.vx = (Math.random() - 0.5) * 10;
+            this.vy = (Math.random() - 0.5) * 10;
+            this.alpha = 1;
+            this.color = color;
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            this.alpha -= 0.02;
+        }
+        draw() {
+            ctx.globalAlpha = this.alpha;
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, 4, 4);
+        }
+    }
+
+    const explode = (x, y, color, count = 12) => {
+        for(let i=0; i<count; i++) particles.push(new Particle(x, y, color));
+    };
+
+    // --- CORE LOGIC ---
+    const resize = () => {
+        width = canvas.width = canvas.offsetWidth;
+        height = canvas.height = canvas.offsetHeight;
+        player.x = width * 0.25;
+    };
+
+    const spawn = () => {
+        const gap = 170 - Math.min(60, score * 2);
+        const minH = 100;
+        const top = Math.random() * (height - gap - minH * 2) + minH;
+        obstacles.push({ x: width, w: 65, top, bottom: top + gap, passed: false });
+    };
+
+    const reset = () => {
+        score = 0;
+        obstacles = [];
+        particles = [];
+        player.y = height / 2;
+        player.vy = 0;
+        player.angle = 0;
+        document.getElementById('ui-score').innerText = '0';
+        document.getElementById('ui-best').innerText = highScore;
+    };
+
+    const gameOver = () => {
+        isRunning = false;
+        playSfx(100, 'sawtooth', 0.4);
+        explode(player.x, player.y, player.color, 40);
+        
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('nb_pro_best', highScore);
+        }
+        
+        document.getElementById('final-score').innerText = `FINAL SCORE: ${score}`;
+        document.getElementById('screen-over').classList.remove('hidden');
+    };
+
+    const update = () => {
+        if (!isRunning) return;
+
+        // Player
+        player.vy += player.gravity;
+        player.y += player.vy;
+        player.angle = Math.min(Math.PI/4, Math.max(-Math.PI/4, player.vy * 0.05));
+
+        if (player.y < 0 || player.y + player.h > height) gameOver();
+
+        // Obstacles
+        if (frame % 100 === 0) spawn();
+        
+        obstacles.forEach((o, i) => {
+            o.x -= 4 + (score * 0.1);
+
+            // AABB Collision
+            if (player.x + player.w > o.x && player.x < o.x + o.w) {
+                if (player.y < o.top || player.y + player.h > o.bottom) gameOver();
+            }
+
+            if (!o.passed && o.x < player.x) {
+                o.passed = true;
+                score++;
+                document.getElementById('ui-score').innerText = score;
+                playSfx(400 + (score * 20), 'sine', 0.1);
+            }
+        });
+
+        obstacles = obstacles.filter(o => o.x + o.w > 0);
+        particles.forEach((p, i) => {
+            p.update();
+            if (p.alpha <= 0) particles.splice(i, 1);
+        });
+
+        frame++;
+    };
+
+    const draw = () => {
+        // Background
+        ctx.fillStyle = '#050508';
+        ctx.fillRect(0, 0, width, height);
+
+        // Grid
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 1;
+        for(let x=0; x<width; x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x, height); ctx.stroke(); }
+
+        // Obstacles
+        ctx.shadowBlur = 15;
+        obstacles.forEach(o => {
+            ctx.fillStyle = '#ff007b';
+            ctx.shadowColor = '#ff007b';
+            ctx.fillRect(o.x, 0, o.w, o.top);
+            ctx.fillRect(o.x, o.bottom, o.w, height);
+            
+            // Neon Lip
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(o.x, o.top - 4, o.w, 4);
+            ctx.fillRect(o.x, o.bottom, o.w, 4);
+        });
+
+        // Particles
+        ctx.shadowBlur = 0;
+        particles.forEach(p => p.draw());
+
+        // Player
+        if (isRunning || particles.length > 0) {
+            ctx.save();
+            ctx.translate(player.x + player.w/2, player.y + player.h/2);
+            ctx.rotate(player.angle);
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = player.color;
+            ctx.fillStyle = player.color;
+            ctx.fillRect(-player.w/2, -player.h/2, player.w, player.h);
+            
+            // Eye
+            ctx.fillStyle = '#000';
+            ctx.fillRect(5, -10, 8, 8);
+            ctx.restore();
+        }
+    };
+
+    const loop = () => {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    };
+
+    // --- INPUT ---
+    const handleInput = (e) => {
+        if (e.cancelable) e.preventDefault();
+        if (isRunning) {
+            player.vy = player.jump;
+            playSfx(600, 'triangle', 0.05);
+            explode(player.x, player.y + player.h/2, '#fff', 5);
+        }
+    };
+
+    // --- PUBLIC API ---
+    return {
+        init: () => {
+            resize();
+            window.addEventListener('resize', resize);
+            window.addEventListener('touchstart', handleInput, {passive: false});
+            window.addEventListener('mousedown', handleInput);
+            document.getElementById('ui-best').innerText = highScore;
+            loop();
+        },
+        start: () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('screen-main').classList.add('hidden');
+            document.getElementById('screen-over').classList.add('hidden');
+            reset();
+            isRunning = true;
+        }
+    };
+})();
+
+// Initialize Engine
+window.onload = () => Engine.init();
+</script>
+</body>
+</html>

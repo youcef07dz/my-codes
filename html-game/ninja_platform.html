@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEON DASH: FINAL VERSION</title>
+    <style>
+        :root { --blue: #00f2ff; --pink: #ff007b; --bg: #050508; }
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-touch-callout: none; }
+        body { background: var(--bg); color: white; font-family: 'Courier New', monospace; overflow: hidden; touch-action: none; }
+        
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        canvas { background: #000; display: block; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+
+        #ui { position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-around; font-weight: bold; pointer-events: none; z-index: 10; font-size: 1.2rem; text-shadow: 0 0 10px var(--blue); }
+        
+        .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; text-align: center; }
+        .btn-start { padding: 15px 40px; background: transparent; border: 2px solid var(--blue); color: var(--blue); font-size: 1.5rem; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+        .btn-start:hover { background: var(--blue); color: #000; box-shadow: 0 0 20px var(--blue); }
+
+        #controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; z-index: 50; }
+        .ctrl-group { display: flex; gap: 15px; }
+        .btn-m { width: 75px; height: 75px; background: rgba(255,255,255,0.1); border: 2px solid var(--blue); border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: var(--blue); touch-action: none; }
+        .btn-m:active { background: var(--blue); color: #000; }
+        .btn-pink { border-color: var(--pink); color: var(--pink); }
+        .btn-pink:active { background: var(--pink); color: #fff; }
+        
+        .hidden { display: none !important; }
+        #shield-bar { height: 4px; background: white; width: 0%; transition: width 0.1s; margin-top: 5px; box-shadow: 0 0 10px white; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="ui">
+        <div>LEVEL: <span id="lvl-val">1</span></div>
+        <div style="text-align:center">DATA-BITS: <span id="coin-val">0</span>/10<div id="shield-bar"></div></div>
+    </div>
+
+    <div id="menu" class="overlay">
+        <h1 style="font-size: 3rem; color: var(--blue); text-shadow: 0 0 20px var(--blue);">NEON DASH</h1>
+        <p style="margin: 10px;">Arrows to Move | Space to Jump | C to Dash</p>
+        <button class="btn-start" onclick="Engine.start()">BOOT SYSTEM</button>
+    </div>
+
+    <div id="controls">
+        <div class="ctrl-group">
+            <div class="btn-m" id="m-left">←</div>
+            <div class="btn-m" id="m-right">→</div>
+        </div>
+        <div class="ctrl-group">
+            <div class="btn-m btn-pink" id="m-dash">D</div>
+            <div class="btn-m" id="m-jump">J</div>
+        </div>
+    </div>
+
+    <canvas id="stage"></canvas>
+</div>
+
+<script>
+const Engine = (() => {
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const TILE_SIZE = 40;
+    
+    // #=Wall, @=Coin, ^=Spikes, !=Goal, E=Enemy
+    const levels = [
+        ["########################################","#                                      #","#    @@@         @@@                     #","#   #####      #####                   #","#                                E    !#","###########^^^^^^^^^^###################"],
+        ["########################################","#                                      #","#  @@@                                   #","######     E      @@@                  #","#         #####  #####        E       !#","########################^^^^^^##########"],
+        ["############################################################","#                                                          #","#    E        @@@          E           @@@                 #","##########   #####   ###########      #####      E        !#","#                                               ###      ###","############################################################"],
+        ["########################################","#  !                                   #","# ###          @@@          E            #","#        ###########     ###########   #","#   @                                  #","#######^^^^^^^^^^^^^^^^^^^^^^^^^^#######"],
+        ["######################################################################","#                                                                    #","#   E      @@@      E       @@@      E       @@@      E             !#","#######   #####   #####   #####   #####   #####   #####   ############","#                                                                    #","######################################################################"]
+    ];
+
+    let state = { running: false, lvl: 0, coins: 0, camX: 0 };
+    let enemies = [];
+    const input = { left: false, right: false, jump: false, dash: false };
+
+    const audio = new (window.AudioContext || window.webkitAudioContext)();
+    const playSfx = (f, t, d) => {
+        try {
+            const o = audio.createOscillator(); const g = audio.createGain();
+            o.type = t; o.frequency.setValueAtTime(f, audio.currentTime);
+            g.gain.setValueAtTime(0.1, audio.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + d);
+            o.connect(g); g.connect(audio.destination);
+            o.start(); o.stop(audio.currentTime + d);
+        } catch(e) {}
+    };
+
+    class Enemy {
+        constructor(x, y) { this.x = x; this.y = y; this.w = 30; this.h = 30; this.vx = 2; }
+        update(map) {
+            this.x += this.vx;
+            let tx = Math.floor((this.x + (this.vx > 0 ? this.w : 0)) / TILE_SIZE);
+            let ty = Math.floor((this.y + this.h + 2) / TILE_SIZE);
+            let nextTile = map[Math.floor(this.y/TILE_SIZE)]?.[tx];
+            let groundTile = map[ty]?.[tx];
+            if (nextTile === "#" || groundTile !== "#") this.vx *= -1;
+        }
+        draw() {
+            let tx = this.x - state.camX;
+            ctx.fillStyle = "#ff0000"; ctx.shadowBlur = 10; ctx.shadowColor = "red";
+            ctx.fillRect(tx, this.y + 10, this.w, this.h - 10);
+            ctx.fillStyle = "white"; ctx.fillRect(tx + (this.vx > 0 ? 20 : 5), this.y + 15, 5, 5);
+            ctx.shadowBlur = 0;
+        }
+    }
+
+    const player = {
+        x: 80, y: 100, w: 25, h: 38, vx: 0, vy: 0,
+        onG: false, dashCd: 0, invinc: false, invincT: 0,
+        reset() { 
+            this.x = 80; this.y = 100; this.vx = 0; this.vy = 0; 
+            this.invinc = false; this.invincT = 0;
+            updateUI();
+        }
+    };
+
+    const clearInput = () => { input.left = false; input.right = false; input.jump = false; input.dash = false; };
+
+    const updateUI = () => {
+        document.getElementById('lvl-val').innerText = state.lvl + 1;
+        document.getElementById('coin-val').innerText = state.coins;
+        document.getElementById('shield-bar').style.width = player.invinc ? (player.invincT / 300 * 100) + "%" : "0%";
+    };
+
+    const loadLevel = () => {
+        enemies = [];
+        clearInput();
+        const map = levels[state.lvl];
+        map.forEach((row, r) => {
+            row.split('').forEach((char, c) => {
+                if (char === "E") enemies.push(new Enemy(c * TILE_SIZE, r * TILE_SIZE));
+            });
+        });
+        player.reset();
+        updateUI();
+    };
+
+    const die = () => { playSfx(100, 'square', 0.3); player.reset(); clearInput(); };
+
+    const update = () => {
+        if (!state.running) return;
+
+        if (input.left) player.vx = -5;
+        else if (input.right) player.vx = 5;
+        else player.vx *= 0.8;
+
+        if (input.dash && player.dashCd <= 0) {
+            player.vx = (input.left ? -1 : (input.right ? 1 : (player.vx >= 0 ? 1 : -1))) * 15;
+            player.dashCd = 40;
+            playSfx(200, 'sawtooth', 0.2);
+        }
+        if (player.dashCd > 0) player.dashCd--;
+
+        player.vy += 0.6; 
+        if (input.jump && player.onG) { player.vy = -12; player.onG = false; playSfx(400, 'sine', 0.1); }
+
+        player.x += player.vx; checkColl('x');
+        player.y += player.vy; player.onG = false; checkColl('y');
+
+        // Powerup Logic
+        if (state.coins >= 10 && !player.invinc) {
+            state.coins -= 10; player.invinc = true; player.invincT = 300;
+            playSfx(600, 'sine', 0.5);
+        }
+        if (player.invinc) { 
+            player.invincT--; 
+            updateUI();
+            if (player.invincT <= 0) player.invinc = false; 
+        }
+
+        enemies.forEach((e, i) => {
+            e.update(levels[state.lvl]);
+            if (player.x < e.x + e.w && player.x + player.w > e.x && player.y < e.y + e.h && player.y + player.h > e.y) {
+                if (player.invinc) { enemies.splice(i, 1); playSfx(300, 'square', 0.1); }
+                else die();
+            }
+        });
+
+        state.camX = player.x - canvas.width/3;
+        if (player.y > canvas.height) die();
+    };
+
+    const checkColl = (axis) => {
+        const map = levels[state.lvl];
+        for (let r=0; r<map.length; r++) {
+            for (let c=0; c<map[r].length; c++) {
+                let char = map[r][c];
+                if (char === " " || char === "E") continue;
+                let tx = c * TILE_SIZE, ty = r * TILE_SIZE;
+                if (player.x < tx + TILE_SIZE && player.x + player.w > tx && player.y < ty + TILE_SIZE && player.y + player.h > ty) {
+                    if (char === "#") {
+                        if (axis === 'x') { player.x = (player.vx > 0) ? tx - player.w : tx + TILE_SIZE; player.vx = 0; }
+                        else { if (player.vy > 0) { player.y = ty - player.h; player.onG = true; } else { player.y = ty + TILE_SIZE; } player.vy = 0; }
+                    } else if (char === "@") {
+                        let row = levels[state.lvl][r].split(''); row[c] = " "; levels[state.lvl][r] = row.join('');
+                        state.coins++; updateUI(); playSfx(800, 'triangle', 0.1);
+                    } else if (char === "^") die();
+                    else if (char === "!") { state.lvl = (state.lvl + 1) % levels.length; loadLevel(); }
+                }
+            }
+        }
+    };
+
+    const draw = () => {
+        ctx.fillStyle = "#050508"; ctx.fillRect(0,0,canvas.width, canvas.height);
+        
+        // Parallax Stars
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        for(let i=0; i<30; i++) ctx.fillRect((i*200 - state.camX*0.2) % canvas.width, (i*100)%canvas.height, 2, 2);
+
+        levels[state.lvl].forEach((row, r) => {
+            row.split('').forEach((char, c) => {
+                let tx = c * TILE_SIZE - state.camX, ty = r * TILE_SIZE;
+                if (char === "#") {
+                    ctx.fillStyle = "#111"; ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = varColor('--blue'); ctx.strokeRect(tx+2, ty+2, TILE_SIZE-4, TILE_SIZE-4);
+                } else if (char === "@") {
+                    ctx.fillStyle = "gold"; ctx.beginPath(); ctx.arc(tx+20, ty+20, 6, 0, 7); ctx.fill();
+                } else if (char === "^") {
+                    ctx.fillStyle = varColor('--pink'); ctx.beginPath(); ctx.moveTo(tx, ty+40); ctx.lineTo(tx+20, ty+10); ctx.lineTo(tx+40, ty+40); ctx.fill();
+                } else if (char === "!") {
+                    ctx.fillStyle = varColor('--pink'); ctx.shadowBlur = 15; ctx.shadowColor = varColor('--pink');
+                    ctx.fillRect(tx+10, ty, 20, 40); ctx.shadowBlur = 0;
+                }
+            });
+        });
+
+        enemies.forEach(e => e.draw());
+        
+        ctx.fillStyle = player.invinc ? "white" : varColor('--blue');
+        ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle;
+        ctx.fillRect(player.x - state.camX, player.y, player.w, player.h);
+        ctx.shadowBlur = 0;
+    };
+
+    const varColor = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+    return {
+        start: () => { 
+            if (audio.state === 'suspended') audio.resume();
+            state.running = true; 
+            document.getElementById('menu').classList.add('hidden');
+            loadLevel();
+            requestAnimationFrame(function loop() { update(); draw(); requestAnimationFrame(loop); });
+        },
+        init: () => {
+            canvas.width = window.innerWidth; canvas.height = 240;
+            
+            // Keyboard Handlers
+            window.addEventListener('keydown', e => {
+                if (e.code === 'ArrowLeft' || e.code === 'KeyA') input.left = true;
+                if (e.code === 'ArrowRight' || e.code === 'KeyD') input.right = true;
+                if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') input.jump = true;
+                if (e.code === 'ArrowDown' || e.code === 'KeyC') input.dash = true;
+            });
+            window.addEventListener('keyup', e => {
+                if (e.code === 'ArrowLeft' || e.code === 'KeyA') input.left = false;
+                if (e.code === 'ArrowRight' || e.code === 'KeyD') input.right = false;
+                if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') input.jump = false;
+                if (e.code === 'ArrowDown' || e.code === 'KeyC') input.dash = false;
+            });
+
+            // Fixed Touch Handlers
+            const bind = (id, key) => {
+                const el = document.getElementById(id);
+                const start = (e) => { e.preventDefault(); input[key] = true; };
+                const end = (e) => { e.preventDefault(); input[key] = false; };
+                el.addEventListener('touchstart', start);
+                el.addEventListener('touchend', end);
+                el.addEventListener('touchcancel', end);
+                el.addEventListener('mousedown', start);
+                el.addEventListener('mouseup', end);
+                el.addEventListener('mouseleave', end);
+            };
+            bind('m-left', 'left'); bind('m-right', 'right');
+            bind('m-jump', 'jump'); bind('m-dash', 'dash');
+        }
+    };
+})();
+window.onload = Engine.init;
+</script>
+</body>
+</html>

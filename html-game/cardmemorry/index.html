@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Memory Game</title>
+</head>
+<body>
+
+<!-- MAIN MENU -->
+<div class="screen active" id="menu">
+  <h1 class="title">?? Memory Game</h1>
+  <button onclick="show('levels')">? Play</button>
+  <button onclick="show('store')">?? Store</button>
+  <button onclick="show('settings')">? Settings</button>
+</div>
+
+<!-- SETTINGS -->
+<div class="screen" id="settings">
+  <h2>? Settings</h2>
+  <label>
+    <input type="checkbox" id="soundToggle" checked>
+    Sound Effects
+  </label>
+  <button onclick="show('menu')">? Back</button>
+</div>
+
+<!-- STORE -->
+<div class="screen" id="store">
+  <h2>?? Store</h2>
+  <p>Coins: <span id="coins">0</span> ?</p>
+  <button onclick="buyTheme()">?? Buy Theme (20?)</button>
+  <button onclick="show('menu')">? Back</button>
+</div>
+
+<!-- LEVELS -->
+<div class="screen" id="levels">
+  <h2>?? Levels</h2>
+  <div class="levels">
+    <button onclick="startGame(4)">Easy (2x2)</button>
+    <button onclick="startGame(8)">Medium (4x2)</button>
+    <button onclick="startGame(12)">Hard (4x3)</button>
+  </div>
+  <button onclick="show('menu')">? Back</button>
+</div>
+
+<!-- GAMEPLAY -->
+<div class="screen" id="game">
+  <div class="top-bar">
+    <span>? <span id="gameCoins">0</span></span>
+    <button onclick="show('menu')">?</button>
+  </div>
+  <div id="board" class="board"></div>
+</div>
+
+
+</body>
+</html>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #121212;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.screen {
+  display: none;
+  width: 90%;
+  max-width: 360px;
+  background: #1e1e1e;
+  padding: 20px;
+  border-radius: 20px;
+  text-align: center;
+}
+
+.screen.active {
+  display: block;
+}
+
+.title {
+  font-size: 32px;
+  margin-bottom: 20px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  margin: 8px 0;
+  font-size: 16px;
+  border: none;
+  border-radius: 12px;
+  background: #4caf50;
+  color: white;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+.levels button {
+  background: #2196f3;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.card {
+  background: #333;
+  aspect-ratio: 1;
+  font-size: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.card.flipped {
+  background: #ff9800;
+}
+
+</style>
+
+<script>
+let coins = Number(localStorage.getItem("coins")) || 0;
+let flipped = [];
+let lock = false;
+
+const emojis = ["??","??","??","??","??","??","??","??"];
+
+updateCoins();
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function updateCoins() {
+  document.getElementById("coins").innerText = coins;
+  document.getElementById("gameCoins").innerText = coins;
+  localStorage.setItem("coins", coins);
+}
+
+function buyTheme() {
+  if (coins >= 20) {
+    coins -= 20;
+    alert("Theme unlocked ??");
+    updateCoins();
+  } else {
+    alert("Not enough coins!");
+  }
+}
+
+function startGame(count) {
+  show("game");
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  board.style.gridTemplateColumns = "repeat(4, 1fr)";
+  flipped = [];
+  lock = false;
+
+  let cards = emojis.slice(0, count/2);
+  cards = [...cards, ...cards].sort(() => Math.random() - 0.5);
+
+  cards.forEach(e => {
+    const c = document.createElement("div");
+    c.className = "card";
+    c.dataset.val = e;
+    c.innerText = "?";
+    c.onclick = () => flip(c);
+    board.appendChild(c);
+  });
+}
+
+function flip(card) {
+  if (lock || card.classList.contains("flipped")) return;
+
+  card.classList.add("flipped");
+  card.innerText = card.dataset.val;
+  flipped.push(card);
+
+  if (flipped.length === 2) {
+    lock = true;
+    setTimeout(check, 600);
+  }
+}
+
+function check() {
+  const [a,b] = flipped;
+  if (a.dataset.val === b.dataset.val) {
+    coins += 2;
+    updateCoins();
+  } else {
+    a.classList.remove("flipped");
+    b.classList.remove("flipped");
+    a.innerText = "?";
+    b.innerText = "?";
+  }
+  flipped = [];
+  lock = false;
+}
+
+</script>

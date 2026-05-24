@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مغامرة الذاكرة الذكية</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="scr-menu" class="screen active">
+        <div class="coin-display">⭐ <span id="total-coins">0</span></div>
+        <div class="hero-bounce">🏝️</div>
+        <h1 class="title">غابة الأبطال</h1>
+        <button class="btn btn-main" onclick="nav('scr-cat')">ابدأ المغامرة!</button>
+        <div class="controls">
+            <button class="btn btn-circle btn-purple" onclick="nav('scr-shop')">🛒</button>
+            <button class="btn btn-circle btn-yellow" onclick="resetProgress()">🔄</button>
+        </div>
+    </div>
+
+    <div id="scr-cat" class="screen">
+        <h2 class="subtitle">اختر عالمك الخاص 🌍</h2>
+        <div class="cat-grid">
+            <div class="cat-card" onclick="setCat('ar')"><span class="cat-emoji">🅰️</span>حروف</div>
+            <div class="cat-card" onclick="setCat('num')"><span class="cat-emoji">🔢</span>أرقام</div>
+            <div class="cat-card" onclick="setCat('animals')"><span class="cat-emoji">🦁</span>حيوانات</div>
+            <div class="cat-card" onclick="setCat('objects')"><span class="cat-emoji">🚀</span>أشياء</div>
+        </div>
+        <button class="btn btn-secondary" onclick="nav('scr-menu')">رجوع</button>
+    </div>
+
+    <div id="scr-levels" class="screen">
+        <h2 class="subtitle">خريطة الجزر 🗺️</h2>
+        <div class="map-viewport">
+            <div id="map-path" class="map-track"></div>
+        </div>
+        <button class="btn btn-secondary" onclick="nav('scr-cat')">رجوع</button>
+    </div>
+
+    <div id="scr-shop" class="screen">
+        <h2 class="subtitle">متجر الأبطال 🎁</h2>
+        <div class="coin-display">رصيدك: ⭐ <span id="shop-coins">0</span></div>
+        <div class="shop-grid">
+            <div class="shop-item" onclick="buyTheme('classic', 0)">
+                <div class="item-preview theme-classic">❓</div>
+                <p>كلاسيك (0)</p>
+            </div>
+            <div class="shop-item" onclick="buyTheme('ocean', 50)">
+                <div class="item-preview theme-ocean">🌊</div>
+                <p>المحيط (50)</p>
+            </div>
+            <div class="shop-item" onclick="buyTheme('forest', 100)">
+                <div class="item-preview theme-forest">🌿</div>
+                <p>الغابة (100)</p>
+            </div>
+            <div class="shop-item" onclick="buyTheme('space', 200)">
+                <div class="item-preview theme-space">🌌</div>
+                <p>الفضاء (200)</p>
+            </div>
+        </div>
+        <button class="btn btn-secondary" onclick="nav('scr-menu')">رجوع</button>
+    </div>
+
+    <div id="scr-game" class="screen">
+        <div id="pause-overlay" class="overlay">
+            <h1>استراحة ⏸️</h1>
+            <button class="btn btn-main" onclick="resumeGame()">استمرار</button>
+            <button class="btn btn-secondary" onclick="nav('scr-menu')">خروج</button>
+        </div>
+        <div class="game-header">
+            <div class="stat-bubble">مرحلة: <span id="txt-lvl">1</span></div>
+            <div class="stat-bubble">⭐ <span id="game-coins">0</span></div>
+            <button class="btn-pause" onclick="pauseGame()">⏸️</button>
+        </div>
+        <div id="timer-container"><div id="timer-bar"></div></div>
+        <div id="game-board" class="game-grid"></div>
+    </div>
+
+    <div id="scr-win" class="screen">
+        <div class="hero-bounce">🏆</div>
+        <h1 class="title">بطل حقيقي!</h1>
+        <p id="win-stats"></p>
+        <button class="btn btn-main" onclick="nav('scr-levels')">الخريطة 🗺️</button>
+        <button class="btn btn-secondary" onclick="nav('scr-menu')">الرئيسية</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

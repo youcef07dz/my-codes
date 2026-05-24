@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0b1020"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title data-translate="title">Emoji Memory Quest</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Background Theme Layer -->
+  <div id="backgroundTheme" class="background-theme"></div>
+  
+  <!-- Particle Container -->
+  <div id="particlesContainer" class="particles-container"></div>
+  
+  <!-- Confetti Container -->
+  <div id="confettiContainer" class="confetti-container"></div>
+  
+  <!-- Floating Coins Container -->
+  <div id="floatingCoinsContainer" class="floating-coins-container"></div>
+
+  <!-- Desktop Header -->
+  <header class="header desktop-header">
+    <h1>🎮 Emoji Memory Quest</h1>
+    <div class="subtitle">Flip cards to find matches. Level up to unlock skins.</div>
+  </header>
+
+  <main class="container">
+    <!-- Game Mode Indicator -->
+    <div class="game-mode-indicator" id="gameModeIndicator"></div>
+
+    <!-- HUD - Responsive for all devices -->
+    <section class="hud">
+      <div class="hud-item">
+        <span class="hud-label" data-translate="level">Level</span>
+        <span class="hud-value" id="level">1</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label" data-translate="score">Score</span>
+        <span class="hud-value" id="score">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label" data-translate="time">Time</span>
+        <span class="hud-value" id="time">60</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label" data-translate="coins">Coins</span>
+        <span class="hud-value coins" id="coins">0</span>
+      </div>
+    </section>
+    
+    <!-- Floating Combo Notice -->
+    <div class="combo-notice" id="comboNotice">
+      <span class="combo-text">🔥 COMBO x<span id="comboCount">2</span>! 🔥</span>
+    </div>
+
+    <!-- Welcome/Setup Screen (First Launch) -->
+    <section class="screen setup-screen active" id="setupScreen">
+      <div class="setup-content">
+        <div class="setup-header">
+          <div class="logo-icon">🎮</div>
+          <h1>Emoji Memory Quest</h1>
+          <p class="setup-welcome">Welcome! Let's personalize your experience.</p>
+        </div>
+        
+        <div class="setup-options">
+          <!-- Language Selection -->
+          <div class="setup-item">
+            <label>🌍 Select Language</label>
+            <div class="setup-buttons">
+              <button class="setup-btn" data-lang="en">
+                <span class="setup-flag">🇺🇸</span>
+                <span>English</span>
+              </button>
+              <button class="setup-btn" data-lang="ar">
+                <span class="setup-flag">🇸🇦</span>
+                <span>العربية</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Graphic Quality Selection -->
+          <div class="setup-item">
+            <label>🎨 Graphic Quality</label>
+            <div class="setup-buttons">
+              <button class="setup-btn" data-quality="high">
+                <span class="setup-icon">✨</span>
+                <span>High (Full Effects)</span>
+              </button>
+              <button class="setup-btn" data-quality="low">
+                <span class="setup-icon">⚡</span>
+                <span>Low (Best Performance)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <button class="btn-primary setup-start-btn" id="setupStartBtn">
+          <span>🚀 Start Playing</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Main Menu Screen -->
+    <section class="screen main-menu-screen" id="mainMenuScreen">
+      <div class="main-menu-content">
+        <div class="game-logo">
+          <div class="logo-icon">🎮</div>
+          <h1 data-translate="title">Emoji Memory Quest</h1>
+          <p class="tagline" data-translate="tagline">Test your memory, match the emojis!</p>
+        </div>
+        
+        <!-- Daily Reward Section -->
+        <div class="daily-reward-section" id="dailyRewardSection">
+          <div class="daily-reward-badge" id="dailyRewardBadge">
+            <span class="reward-icon">🎁</span>
+            <span class="reward-text" data-translate="dailyReward">Daily Reward</span>
+            <span class="reward-timer" id="dailyRewardTimer"></span>
+          </div>
+        </div>
+        
+        <!-- Daily Challenge Badge -->
+        <div class="daily-challenge-badge" id="dailyChallengeBadge" style="display: none;">
+          <span class="challenge-icon">📅</span>
+          <span class="challenge-text" data-translate="dailyChallenge">Daily Challenge</span>
+          <span class="challenge-status">🔥 Active</span>
+        </div>
+        
+        <div class="menu-buttons">
+          <button class="menu-play-btn" id="playGameBtn">
+            <span class="btn-icon">▶️</span>
+            <span class="btn-text" data-translate="play">Play Game</span>
+          </button>
+          
+          <button class="menu-secondary-btn" id="mainMenuDailyChallenges">
+            <span class="btn-icon">📅</span>
+            <span class="btn-text" data-translate="dailyChallenges">Daily Challenges</span>
+          </button>
+          
+          <button class="menu-secondary-btn" id="mainMenuGameModes">
+            <span class="btn-icon">🎮</span>
+            <span class="btn-text" data-translate="gameModes">Game Modes</span>
+          </button>
+          
+          <button class="menu-secondary-btn" id="mainMenuWorlds">
+            <span class="btn-icon">🌍</span>
+            <span class="btn-text" data-translate="worlds">Worlds</span>
+          </button>
+          
+          <button class="menu-secondary-btn" id="mainMenuTournament">
+            
+            <span class="btn-text" data-translate="weeklyTournament">Weekly Tournament</span>
+          </button>
+          
+          <button class="menu-secondary-btn" id="mainMenuStore">
+            <span class="btn-icon">🛍️</span>
+            <span class="btn-text" data-translate="store">Store</span>
+          </button>
+          
+          <button class="menu-secondary-btn" id="mainMenuAchievements">
+            <span class="btn-icon">🏆</span>
+            <span class="btn-text" data-translate="achievements">Achievements</span>
+          </button>
+          
+          <button class="menu-secondary-btn" id="mainMenuStats">
+            <span class="btn-icon">📊</span>
+            <span class="btn-text" data-translate="statistics">Statistics</span>
+          </button>
+          
+          <button class="menu-secondary-btn" id="mainMenuSettings">
+            <span class="btn-icon">⚙️</span>
+            <span class="btn-text" data-translate="settings">Settings</span>
+          </button>
+          
+          <button class="menu-secondary-btn" id="mainMenuCheats" style="background: linear-gradient(135deg, rgba(255,107,107,0.2), rgba(255,107,107,0.05)); border-color: rgba(255,107,107,0.5);">
+            <span class="btn-icon">🔓</span>
+            <span class="btn-text" data-translate="cheatCodes">Cheat Codes</span>
+          </button>
+		  
+		  <button class="menu-secondary-btn" id="mainMenuAboutBtn">
+  <span class="btn-icon">👤</span>
+  <span class="btn-text">About Me</span>
+</button>
+          
+          <div class="settings-row">
+            <button class="settings-btn" id="mainMenuSound">
+              <span id="mainSoundIcon">🔊</span>
+              <span data-translate="sound">Sound</span>
+            </button>
+            <button class="settings-btn" id="mainMenuLanguage">
+              <span>🌐</span>
+              <span id="mainLangText">EN</span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="stats-preview">
+          <div class="stat-item">
+            <span class="stat-icon">🏆</span>
+            <span class="stat-label" data-translate="bestLevel">Best Level</span>
+            <span class="stat-value" id="bestLevelDisplay">1</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">💰</span>
+            <span class="stat-label" data-translate="totalCoins">Total Coins</span>
+            <span class="stat-value" id="totalCoinsDisplay">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">🏆</span>
+            <span class="stat-label" data-translate="achievements">Achievements</span>
+            <span class="stat-value" id="achievementsDisplay">0/20</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Game Mode Selection Screen -->
+    <section class="screen game-modes-screen" id="gameModesScreen">
+      <div class="game-modes-header">
+        <h2 data-translate="selectGameMode">🎮 Select Game Mode</h2>
+        <p data-translate="gameModeDesc">Choose your challenge level!</p>
+        <div class="header-buttons">
+          <button class="btn-back" id="gameModesHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+        </div>
+      </div>
+      <div class="game-modes-container">
+        <div class="game-mode-card" data-mode="normal">
+          <div class="mode-icon">🎮</div>
+          <h3 data-translate="normalMode">Normal Mode</h3>
+          <p data-translate="normalModeDesc">Standard gameplay with balanced difficulty</p>
+          <div class="mode-stats">
+            <span>🃏 4-16 cards</span>
+            <span>⏱️ Standard time</span>
+          </div>
+        </div>
+        
+        <div class="game-mode-card" data-mode="hard">
+          <div class="mode-icon">🔥</div>
+          <h3 data-translate="hardMode">Hard Mode</h3>
+          <p data-translate="hardModeDesc">More cards, less time, bigger rewards!</p>
+          <div class="mode-stats">
+            <span>🃏 20-24 cards</span>
+            <span>⏱️ Reduced time</span>
+            <span>💰 2x coins</span>
+          </div>
+          <div class="mode-reward">💰 2x Coins</div>
+        </div>
+        
+        <div class="game-mode-card" data-mode="zen">
+          <div class="mode-icon">🧘</div>
+          <h3 data-translate="zenMode">Zen Mode</h3>
+          <p data-translate="zenModeDesc">No timer, relax and enjoy the game</p>
+          <div class="mode-stats">
+            <span>🃏 4-16 cards</span>
+            <span>⏱️ No time limit</span>
+            <span>🧘 Relaxing</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Daily Challenges Screen -->
+    <section class="screen daily-challenges-screen" id="dailyChallengesScreen">
+      <div class="daily-challenges-header">
+        <h2 data-translate="dailyChallengesTitle">📅 Daily Challenges</h2>
+        <p data-translate="dailyChallengesDesc">Complete special challenges every day!</p>
+        <div class="header-buttons">
+          <button class="btn-back" id="dailyChallengesHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+        </div>
+      </div>
+      <div class="daily-challenges-container">
+        <div class="challenge-calendar" id="challengeCalendar">
+          <!-- Calendar days generated by JS -->
+        </div>
+        <div class="current-challenge" id="currentChallenge">
+          <h3 data-translate="todaysChallenge">Today's Challenge</h3>
+          <div class="challenge-card" id="todayChallengeCard">
+            <div class="challenge-type">⚡ Speed Run</div>
+            <div class="challenge-desc">Complete 5 levels in under 3 minutes</div>
+            <div class="challenge-reward">💰 500 coins</div>
+            <div class="challenge-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 0%"></div>
+              </div>
+              <span class="progress-text">0/5 completed</span>
+            </div>
+          </div>
+        </div>
+        <div class="weekly-progress">
+          <h3 data-translate="weeklyProgress">Weekly Progress</h3>
+          <div class="weekly-streak" id="weeklyStreak">
+            <span>🔥 Streak: 0/7 days</span>
+          </div>
+          <div class="weekly-reward">
+            <span>🎁 Weekly Bonus: 2000 coins</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tournament Screen -->
+    <section class="screen tournament-screen" id="tournamentScreen">
+      <div class="tournament-header">
+        <h2 data-translate="weeklyTournament">🏆 Weekly Tournament</h2>
+        <p data-translate="tournamentDesc">Compete with players worldwide!</p>
+        <div class="tournament-timer" id="tournamentTimer">
+          <span>⏱️ Ends in: 5d 12h 34m</span>
+        </div>
+        <div class="header-buttons">
+          <button class="btn-back" id="tournamentHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+        </div>
+      </div>
+      <div class="tournament-container">
+        <div class="your-rank" id="yourRank">
+          <h3 data-translate="yourRank">Your Rank</h3>
+          <div class="rank-display">
+            <span class="rank-number">#--</span>
+            <span class="rank-score">0 pts</span>
+          </div>
+        </div>
+        <div class="leaderboard" id="leaderboard">
+          <h3 data-translate="leaderboard">Leaderboard</h3>
+          <div class="leaderboard-list" id="leaderboardList">
+            <!-- Leaderboard entries generated by JS -->
+          </div>
+        </div>
+        <div class="tournament-rewards">
+          <h3 data-translate="tournamentRewards">Tournament Rewards</h3>
+          <div class="reward-tiers">
+            <div class="reward-tier">
+              <span class="tier-rank">🥇 1st</span>
+              <span class="tier-reward">5000 💰 + Legendary Skin</span>
+            </div>
+            <div class="reward-tier">
+              <span class="tier-rank">🥈 2nd</span>
+              <span class="tier-reward">3000 💰 + Epic Skin</span>
+            </div>
+            <div class="reward-tier">
+              <span class="tier-rank">🥉 3rd</span>
+              <span class="tier-reward">2000 💰 + Rare Skin</span>
+            </div>
+            <div class="reward-tier">
+              <span class="tier-rank">4-10</span>
+              <span class="tier-reward">1000 💰</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Game Screen -->
+    <section class="screen game-screen" id="gameScreen">
+      <!-- Power-ups Bar -->
+      <div class="powerups-bar" id="powerupsBar">
+        <button class="powerup-btn" id="hintBtn" title="Hint - Reveals a matching pair">
+          <span class="powerup-icon">💡</span>
+          <span class="powerup-count" id="hintCount">3</span>
+        </button>
+        <button class="powerup-btn" id="extraTimeBtn" title="Extra Time - Adds 30 seconds">
+          <span class="powerup-icon">⏰</span>
+          <span class="powerup-count" id="extraTimeCount">2</span>
+        </button>
+        <button class="powerup-btn" id="freezeBtn" title="Freeze - Pauses timer for 10 seconds">
+          <span class="powerup-icon">❄️</span>
+          <span class="powerup-count" id="freezeCount">1</span>
+        </button>
+        <button class="powerup-btn" id="revealBtn" title="Reveal All - Shows all cards briefly">
+          <span class="powerup-icon">👁️</span>
+          <span class="powerup-count" id="revealCount">1</span>
+        </button>
+      </div>
+      
+      <div class="board-container">
+        <div class="board" id="board"></div>
+      </div>
+      <div class="game-controls">
+        <button class="btn-primary" id="restartBtn">
+          <span data-translate="restartLevel">🔄 Restart Level</span>
+        </button>
+        <button class="btn-secondary" id="gameHomeBtn">
+          <span>🏠</span>
+          <span data-translate="home">Home</span>
+        </button>
+        <button class="btn-secondary mobile-only" id="openStoreBtn">
+          <span data-translate="store">🛍️ Store</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- World Selection Screen -->
+    <section class="screen world-select-screen" id="worldSelectScreen">
+      <div class="world-header">
+        <h2 data-translate="selectWorld">🌍 Select World</h2>
+        <p data-translate="worldDesc">Choose a world to explore 1000 levels!</p>
+        <div class="world-progress">
+          <span data-translate="totalProgress">Total Progress</span>: <span id="worldCompletedLevels">0</span> / <span id="worldTotalLevels">1000</span>
+        </div>
+        <div class="header-buttons">
+          <button class="btn-back" id="worldHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+        </div>
+      </div>
+      <div class="world-container">
+        <div class="world-grid" id="worldGrid"></div>
+      </div>
+    </section>
+
+    <!-- Level Map Screen -->
+    <section class="screen level-map-screen" id="levelMapScreen">
+      <div class="level-map-header">
+        <h2 data-translate="worldLevels">🗺️ World Levels</h2>
+        <p data-translate="levelMapDesc">Select a level to play!</p>
+        <div class="level-progress">
+          <span data-translate="world">World</span> <span id="currentWorldNum">1</span> - <span data-translate="completed">Completed</span>: <span id="completedLevels">0</span> / <span id="totalLevels">100</span>
+        </div>
+        <div class="header-buttons">
+          <button class="btn-back" id="backToWorldsBtn">
+            <span>🌍</span>
+            <span data-translate="backToWorlds">Back to Worlds</span>
+          </button>
+          <button class="btn-back" id="mapHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+          <button class="btn-back mobile-only" id="backToGameFromMap">
+            <span data-translate="backToGame">← Back to Game</span>
+          </button>
+        </div>
+      </div>
+      <div class="level-map-container">
+        <div class="level-grid" id="levelGrid"></div>
+      </div>
+    </section>
+
+    <!-- Store Screen -->
+    <section class="screen store-screen" id="storeScreen">
+      <div class="store-header">
+        <h2 data-translate="skinsStore">🛍️ Store</h2>
+        <p data-translate="storeDesc">Spend coins to unlock skins and power-ups!</p>
+        <div class="header-buttons">
+          <button class="btn-back" id="storeHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+          <button class="btn-back mobile-only" id="backToGame">
+            <span data-translate="backToGame">← Back to Game</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Power-ups Section -->
+      <div class="store-section">
+        <h3 class="store-section-title" data-translate="powerupsStore">⚡ Power-ups</h3>
+        <div class="powerups-store" id="powerupsStore">
+          <div class="powerup-store-item" data-powerup="hint">
+            <div class="powerup-store-icon">💡</div>
+            <div class="powerup-store-name" data-translate="powerupHint">Hint</div>
+            <div class="powerup-store-desc">Reveals a matching pair</div>
+            <div class="powerup-store-price">💰 50</div>
+            <button class="powerup-buy-btn" data-powerup="hint" data-price="50">Buy</button>
+          </div>
+          <div class="powerup-store-item" data-powerup="extraTime">
+            <div class="powerup-store-icon">⏰</div>
+            <div class="powerup-store-name" data-translate="powerupExtraTime">Extra Time</div>
+            <div class="powerup-store-desc">Adds 30 seconds</div>
+            <div class="powerup-store-price">💰 75</div>
+            <button class="powerup-buy-btn" data-powerup="extraTime" data-price="75">Buy</button>
+          </div>
+          <div class="powerup-store-item" data-powerup="freeze">
+            <div class="powerup-store-icon">❄️</div>
+            <div class="powerup-store-name" data-translate="powerupFreeze">Freeze</div>
+            <div class="powerup-store-desc">Pauses timer 10s</div>
+            <div class="powerup-store-price">💰 100</div>
+            <button class="powerup-buy-btn" data-powerup="freeze" data-price="100">Buy</button>
+          </div>
+          <div class="powerup-store-item" data-powerup="reveal">
+            <div class="powerup-store-icon">👁️</div>
+            <div class="powerup-store-name" data-translate="powerupReveal">Reveal All</div>
+            <div class="powerup-store-desc">Shows all cards briefly</div>
+            <div class="powerup-store-price">💰 150</div>
+            <button class="powerup-buy-btn" data-powerup="reveal" data-price="150">Buy</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Skins Section -->
+      <div class="store-section">
+        <h3 class="store-section-title" data-translate="skinsSection">🎨 Card Skins</h3>
+        <div class="skins-container">
+          <div class="skins" id="skins"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Achievements Screen -->
+    <section class="screen achievements-screen" id="achievementsScreen">
+      <div class="achievements-header">
+        <h2 data-translate="achievements">🏆 Achievements</h2>
+        <p data-translate="achievementsDesc">Complete challenges to earn badges!</p>
+        <div class="achievements-progress">
+          <span data-translate="unlocked">Unlocked</span>: <span id="achievementsUnlocked">0</span> / <span id="achievementsTotal">20</span>
+        </div>
+        <div class="header-buttons">
+          <button class="btn-back" id="achievementsHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+        </div>
+      </div>
+      <div class="achievements-container">
+        <div class="achievements-grid" id="achievementsGrid"></div>
+      </div>
+    </section>
+
+    <!-- Statistics Screen -->
+    <section class="screen statistics-screen" id="statisticsScreen">
+      <div class="statistics-header">
+        <h2 data-translate="statistics">📊 Statistics</h2>
+        <p data-translate="statisticsDesc">Track your game performance!</p>
+        <div class="header-buttons">
+          <button class="btn-back" id="statisticsHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+        </div>
+      </div>
+      <div class="statistics-container">
+        <div class="statistics-grid" id="statisticsGrid">
+          <div class="stat-card">
+            <div class="stat-card-icon">🎮</div>
+            <div class="stat-card-label" data-translate="gamesPlayed">Games Played</div>
+            <div class="stat-card-value" id="statGamesPlayed">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">🏆</div>
+            <div class="stat-card-label" data-translate="levelsCompleted">Levels Completed</div>
+            <div class="stat-card-value" id="statLevelsCompleted">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">🎯</div>
+            <div class="stat-card-label" data-translate="totalMatches">Total Matches</div>
+            <div class="stat-card-value" id="statTotalMatches">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">⚡</div>
+            <div class="stat-card-label" data-translate="bestCombo">Best Combo</div>
+            <div class="stat-card-value" id="statBestCombo">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">⏱️</div>
+            <div class="stat-card-label" data-translate="bestTime">Best Time</div>
+            <div class="stat-card-value" id="statBestTime">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">💰</div>
+            <div class="stat-card-label" data-translate="totalCoinsEarned">Total Coins Earned</div>
+            <div class="stat-card-value" id="statTotalCoinsEarned">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">🔥</div>
+            <div class="stat-card-label" data-translate="currentStreak">Current Streak</div>
+            <div class="stat-card-value" id="statCurrentStreak">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">🏅</div>
+            <div class="stat-card-label" data-translate="bestStreak">Best Streak</div>
+            <div class="stat-card-value" id="statBestStreak">0</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings Screen -->
+    <section class="screen settings-screen" id="settingsScreen">
+      <div class="settings-header">
+        <h2 data-translate="settings">⚙️ Settings</h2>
+        <p data-translate="settingsDesc">Customize your game experience!</p>
+        <div class="header-buttons">
+          <button class="btn-back" id="settingsHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+        </div>
+      </div>
+      <div class="settings-container">
+        <div class="settings-section">
+          <h3 data-translate="visualSettings">🎨 Visual Settings</h3>
+          
+          <!-- Text Size Slider -->
+          <div class="setting-item slider-item">
+            <label data-translate="textSize">Text Size</label>
+            <input type="range" id="textSizeSlider" min="80" max="150" value="100" class="volume-slider">
+            <span class="volume-value" id="textSizeValue">100%</span>
+          </div>
+          
+          <!-- Graphic Quality -->
+          <div class="setting-item">
+            <label data-translate="graphicQuality">🎨 Graphic Quality</label>
+            <select id="graphicQualitySelect" class="theme-select">
+              <option value="high" data-translate="qualityHigh">High (Full Effects)</option>
+              <option value="low" data-translate="qualityLow">Low (Reduced Effects)</option>
+            </select>
+          </div>
+          
+          <!-- Background Theme -->
+          <div class="setting-item">
+            <label data-translate="backgroundTheme">Background Theme</label>
+            <select id="themeSelect" class="theme-select">
+              <option value="default" data-translate="themeDefault">Default (Space)</option>
+              <option value="forest" data-translate="themeForest">Enchanted Forest</option>
+              <option value="ocean" data-translate="themeOcean">Deep Ocean</option>
+              <option value="city" data-translate="themeCity">Cyber City</option>
+            </select>
+          </div>
+          
+          <!-- Particle Style -->
+          <div class="setting-item">
+            <label data-translate="particleStyle">Particle Style</label>
+            <select id="particleStyleSelect" class="theme-select">
+              <option value="default" data-translate="particlesDefault">Default</option>
+              <option value="minimal" data-translate="particlesMinimal">Minimal</option>
+              <option value="sparkles" data-translate="particlesSparkles">Sparkles</option>
+              <option value="bubbles" data-translate="particlesBubbles">Bubbles</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3 data-translate="audioSettings">🔊 Audio Settings</h3>
+          <div class="setting-item">
+            <label data-translate="soundEffects">Sound Effects</label>
+            <button class="toggle-btn active" id="soundEffectsToggle">
+              <span class="toggle-slider active" id="soundEffectsSlider"></span>
+            </button>
+          </div>
+          <div class="setting-item slider-item">
+            <label data-translate="sfxVolume">SFX Volume</label>
+            <input type="range" id="sfxVolumeSlider" min="0" max="100" value="70" class="volume-slider">
+            <span class="volume-value" id="sfxVolumeValue">70%</span>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3 data-translate="gameSettings">🎮 Game Settings</h3>
+          <div class="setting-item">
+            <label data-translate="particleEffects">Particle Effects</label>
+            <button class="toggle-btn active" id="particlesToggle">
+              <span class="toggle-slider active" id="particlesSlider"></span>
+            </button>
+          </div>
+          <div class="setting-item">
+            <label data-translate="confettiEffects">Confetti Effects</label>
+            <button class="toggle-btn active" id="confettiToggle">
+              <span class="toggle-slider active" id="confettiSlider"></span>
+            </button>
+          </div>
+          <div class="setting-item">
+            <label data-translate="emojiGlow">Emoji Glow on Match</label>
+            <button class="toggle-btn active" id="emojiGlowToggle">
+              <span class="toggle-slider active" id="emojiGlowSlider"></span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3 data-translate="resetOptions">🔄 Reset Options</h3>
+          <button class="btn-secondary reset-btn" id="resetProgressBtn">
+            <span data-translate="resetProgress">Reset Progress</span>
+          </button>
+          <button class="btn-secondary reset-btn" id="resetStatsBtn">
+            <span data-translate="resetStats">Reset Statistics</span>
+          </button>
+          <button class="btn-secondary reset-btn" id="resetAllBtn">
+            <span data-translate="resetAll">Reset Everything</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cheat Codes Screen -->
+    <section class="screen cheat-screen" id="cheatScreen">
+      <div class="cheat-header">
+        <h2 data-translate="cheatCodes">🔓 Cheat Codes</h2>
+        <p data-translate="cheatDesc">Enter secret codes to unlock special features!</p>
+        <div class="header-buttons">
+          <button class="btn-back" id="cheatHomeBtn">
+            <span>🏠</span>
+            <span data-translate="home">Home</span>
+          </button>
+        </div>
+      </div>
+      <div class="cheat-container">
+        
+        <!-- Cheat Input Section -->
+        <div class="cheat-input-section">
+          <label class="cheat-label" data-translate="enterCode">Enter Cheat Code:</label>
+          <div class="cheat-input-row">
+            <input type="text" id="cheatInput" class="cheat-input" placeholder="Type code here..." maxlength="20">
+            <button id="submitCheatBtn" class="cheat-submit-btn" data-translate="submit">Submit</button>
+          </div>
+        </div>
+        
+        <div class="cheat-status" id="cheatStatus"></div>
+        
+        <!-- Cheat Codes List 
+        <div class="cheat-codes-list">
+          
+          <div class="cheat-item" id="cheatUnlockAll">
+            <div class="cheat-icon">🔓</div>
+            <div class="cheat-info">
+              <h3 data-translate="unlockAll">Unlock All Levels</h3>
+              <p data-translate="unlockAllDesc">Instantly unlock all 1000 levels across all worlds</p>
+              <code class="cheat-code">CODE: UNLOCKALL</code>
+            </div>
+            <div class="cheat-status-icon" id="statusUnlockAll">⚪</div>
+          </div>
+          
+          <div class="cheat-item" id="cheatMillionCoins">
+            <div class="cheat-icon">💰</div>
+            <div class="cheat-info">
+              <h3 data-translate="millionCoins">1 Million Coins</h3>
+              <p data-translate="millionCoinsDesc">Get 1,000,000 coins to buy all skins</p>
+              <code class="cheat-code">CODE: MILLION</code>
+            </div>
+            <div class="cheat-status-icon" id="statusMillionCoins">⚪</div>
+          </div>
+          
+          <div class="cheat-item" id="cheatUnlimitedTime">
+            <div class="cheat-icon">⏰</div>
+            <div class="cheat-info">
+              <h3 data-translate="unlimitedTime">Unlimited Time</h3>
+              <p data-translate="unlimitedTimeDesc">Remove timer - play without time limit</p>
+              <code class="cheat-code">CODE: NOTIME</code>
+            </div>
+            <div class="cheat-status-icon" id="statusUnlimitedTime">⚪</div>
+          </div>
+          
+        </div>
+		-->
+      </div>
+    </section>
+    
+    <!-- Level Stats Modal -->
+    <div class="level-stats-modal" id="levelStatsModal">
+      <div class="level-stats-content">
+        <div class="level-stats-header">
+          <span class="level-stats-icon">🎮</span>
+          <h3 data-translate="levelStats">Level Stats</h3>
+        </div>
+        <div class="level-stats-body">
+          <div class="level-stats-info">
+            <span class="level-num" id="statsLevelNum">Level 1</span>
+          </div>
+          <div class="level-stats-details" id="levelStatsDetails">
+            <div class="stat-row">
+              <span>Best Time:</span>
+              <span id="statsBestTime">--</span>
+            </div>
+            <div class="stat-row">
+              <span>Best Score:</span>
+              <span id="statsBestScore">--</span>
+            </div>
+            <div class="stat-row">
+              <span>Attempts:</span>
+              <span id="statsAttempts">0</span>
+            </div>
+          </div>
+        </div>
+        <button class="level-stats-close-btn" id="closeLevelStats" data-translate="close">Close</button>
+      </div>
+    </div>
+	<section class="screen about-screen" id="aboutScreen" style="display: none;">
+  <div class="setup-content" style="text-align: center;">
+    <div class="setup-header">
+      <div class="logo-icon">👤</div>
+      <h1>About the Creator</h1>
+      <p class="setup-welcome">Hi! I'm the developer behind Emoji Memory Quest.</p>
+	  <p class="setup-welcome">Free2Watch</p>
+    </div>
+    
+    <div style="color: white; line-height: 1.6; margin-bottom: 20px; opacity: 0.9;">
+      <p>I love creating interactive  games and apps . 
+         This game was built to test your memory and provide a fun, visual experience 
+         using modern web technologies.</p>
+    </div>
+
+    <div class="setup-options">
+      <button class="menu-secondary-btn" onclick="window.open('https://hatem07.github.io/f2w/', '_blank')">
+        <span class="btn-icon">💻</span>
+        <span class="btn-text">My Portfolio</span>
+      </button>
+    </div>
+    
+    <button class="btn-primary" id="aboutBackBtn" style="margin-top: 20px;">
+      <span>🏠 Back to Menu</span>
+    </button>
+  </div>
+</section>
+  </main>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-nav">
+    <button class="nav-btn active" id="navGame">🎮</button>
+    <button class="nav-btn" id="navStore">🛍️</button>
+    <button class="nav-btn" id="navRestart">🔄</button>
+  </nav>
+
+  <footer class="footer desktop-only">Emoji Memory Quest • Built with emojis</footer>
+  
+  <!-- Custom Dialog Overlay -->
+  <div class="dialog-overlay" id="dialogOverlay">
+    <div class="dialog-box" id="dialogBox">
+      <div class="dialog-icon" id="dialogIcon">🎮</div>
+      <h2 class="dialog-title" id="dialogTitle">Title</h2>
+      <div class="dialog-message" id="dialogMessage">Message goes here</div>
+      <div class="dialog-buttons" id="dialogButtons">
+        <button class="dialog-btn dialog-btn-primary" id="dialogBtnPrimary" data-translate="ok">OK</button>
+        <button class="dialog-btn dialog-btn-secondary" id="dialogBtnSecondary" data-translate="cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Daily Reward Modal -->
+  <div class="daily-reward-modal" id="dailyRewardModal">
+    <div class="daily-reward-content">
+      <div class="daily-reward-header">
+        <span class="daily-reward-icon">🎁</span>
+        <h2 data-translate="dailyReward">Daily Reward</h2>
+      </div>
+      <div class="daily-reward-body">
+        <div class="reward-day-indicator" id="rewardDayIndicator">Day 1</div>
+        <div class="reward-amount" id="rewardAmount">💰 100 Coins</div>
+        <div class="reward-streak" id="rewardStreak">🔥 Streak: 1 day</div>
+      </div>
+      <button class="daily-reward-claim-btn" id="claimRewardBtn" data-translate="claimReward">Claim Reward</button>
+      <div class="daily-reward-timer" id="nextRewardTimer">Next reward in: 24:00:00</div>
+    </div>
+  </div>
+  
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مغامرة فقاعات الذاكرة - النسخة الكاملة</title>
+    <style>
+        :root {
+            --pink: #FF1F5E; --blue: #0077B6; --yellow: #FFD000;
+            --green: #2D6A4F; --purple: #7209B7; --white: #FFFFFF;
+            --dark: #2B2D42; --bg-grad: linear-gradient(180deg, #CAF0F8 0%, #90E0EF 100%);
+        }
+
+        * { scrollbar-width: none; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        *::-webkit-scrollbar { display: none; }
+
+        body {
+            font-family: 'Arial Rounded MT Bold', 'Arial', sans-serif;
+            background: var(--bg-grad); margin: 0; height: 100vh; width: 100vw;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; touch-action: none; position: relative;
+        }
+
+        /* Background Bubbles */
+        .bg-bubbles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        .bg-bubbles li {
+            position: absolute; list-style: none; display: block; background-color: rgba(255, 255, 255, 0.4);
+            bottom: -160px; border-radius: 50%; animation: bubbleUp 15s linear infinite;
+        }
+        @keyframes bubbleUp {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-1200px) rotate(720deg); opacity: 0; }
+        }
+
+        /* Screen Style */
+        .screen {
+            display: none; width: 92%; max-width: 420px; background: var(--white);
+            border: 6px solid var(--dark); border-radius: 40px; padding: 25px; text-align: center;
+            box-shadow: 0 15px 0 rgba(0,0,0,0.2); position: relative; z-index: 5;
+        }
+        .screen.active { display: block; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* Level Menu */
+        #lvl-list {
+            display: flex; flex-direction: column; align-items: center; gap: 25px;
+            max-height: 400px; overflow-y: auto; padding: 40px 10px;
+            background: rgba(0,0,0,0.05); border-radius: 30px; border: 4px inset var(--dark);
+        }
+        .lvl-bubble {
+            width: 85px; height: 85px; background: var(--blue); border: 4px solid var(--dark);
+            border-radius: 50%; color: white; font-size: 2rem; font-weight: 900;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            position: relative; box-shadow: 0 8px 0 var(--dark), inset -5px -5px 15px rgba(0,0,0,0.2);
+            transition: 0.2s;
+        }
+        .lvl-bubble::before { 
+            content: ''; position: absolute; top: 10px; left: 15px; width: 25px; height: 12px;
+            background: rgba(255, 255, 255, 0.4); border-radius: 50%; transform: rotate(-30deg);
+        }
+        .lvl-bubble:nth-child(odd) { transform: translateX(-40px); }
+        .lvl-bubble:nth-child(even) { transform: translateX(40px); }
+        .lvl-bubble:active { transform: translateY(4px) scale(0.9); box-shadow: 0 4px 0 var(--dark); }
+
+        /* Buttons */
+        .btn {
+            background: var(--blue); color: var(--white); border: 3px solid var(--dark);
+            padding: 16px 20px; border-radius: 25px; font-size: 1.5rem;
+            font-weight: 900; margin: 10px 0; cursor: pointer; width: 90%;
+            box-shadow: 0 8px 0 var(--dark); text-shadow: 2px 2px 0 rgba(0,0,0,0.3); transition: 0.1s;
+        }
+        .btn-yellow { background: var(--yellow); color: var(--dark); text-shadow: none; }
+        .btn-red { background: var(--pink); }
+
+        .game-stats { display: flex; justify-content: space-between; align-items: center; font-weight: 900; margin-bottom: 5px; color: var(--dark); font-size: 0.9rem; }
+        .grid { display: grid; gap: 10px; justify-content: center; margin: 10px auto; }
+        
+        /* Cards */
+        .card { width: 75px; height: 75px; position: relative; transform-style: preserve-3d; transition: 0.3s; cursor: pointer; }
+        .card.flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            border-radius: 18px; display: flex; align-items: center; justify-content: center;
+            font-size: 2.2rem; border: 4px solid var(--dark);
+        }
+        .card-back { background: var(--purple); color: var(--white); box-shadow: 0 5px 0 var(--dark); }
+        .card-front { background: var(--white); transform: rotateY(180deg); color: var(--blue); }
+
+        #timer-wrap { width: 100%; height: 24px; background: var(--dark); border-radius: 15px; margin: 10px 0; padding: 4px; }
+        #timer-fill { width: 100%; height: 100%; background: #00FF00; border-radius: 10px; transition: width 0.1s linear; }
+
+        #combo-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 3rem; color: var(--pink); font-weight: 900; z-index: 100; display: none; text-shadow: 3px 3px 0 #fff, 5px 5px 0 var(--dark); pointer-events: none; }
+        
+        .badge-icon { font-size: 2.2rem; filter: grayscale(1); opacity: 0.3; transition: 0.4s; }
+        .unlocked { filter: grayscale(0); opacity: 1; transform: scale(1.2); }
+        
+        .time-penalty-flash { animation: flashRed 0.5s; }
+        @keyframes flashRed { 0% { background: white; } 50% { background: #ffcccc; } 100% { background: white; } }
+
+        input { width: 85%; padding: 12px; border: 3px solid var(--dark); border-radius: 15px; font-size: 1.2rem; text-align: center; margin: 10px 0; }
+        
+        /* Pause Styles */
+        #scr-pause { z-index: 1000; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    </style>
+</head>
+<body>
+
+    <ul class="bg-bubbles" id="bg-bubbles"></ul>
+    <div id="combo-text">COMBO! 🔥</div>
+
+    <div id="scr-menu" class="screen active">
+        <h1 style="color:var(--purple); -webkit-text-stroke:1px #fff; font-size:2.8rem; margin-bottom: 25px;">🫧 غابة الأذكياء</h1>
+        <button class="btn btn-yellow" onclick="resetGame(); nav('scr-cat')">إلعب الآن</button>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top: 10px;">
+            <button class="btn btn-small btn-mute-all" style="width:70px; height:70px; border-radius: 50%;" onclick="toggleMute()">🔊</button>
+            <button class="btn btn-red" style="width:70px; height:70px; border-radius: 50%;" onclick="nav('scr-high')">🏆</button>
+        </div>
+    </div>
+
+    <div id="scr-cat" class="screen">
+        <h2>اختر عالمك ✨</h2>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin:20px 0;">
+            <div class="btn btn-yellow" style="width:100%; font-size:1.1rem; padding: 25px 10px;" onclick="setCat('ar')">🔠 الحروف</div>
+            <div class="btn btn-yellow" style="width:100%; font-size:1.1rem; padding: 25px 10px;" onclick="setCat('num')">🔢 الأرقام</div>
+            <div class="btn btn-yellow" style="width:100%; font-size:1.1rem; padding: 25px 10px;" onclick="setCat('animals')">🦁 حيوانات</div>
+            <div class="btn btn-yellow" style="width:100%; font-size:1.1rem; padding: 25px 10px;" onclick="setCat('objects')">🚀 أشياء</div>
+        </div>
+        <button class="btn btn-red" onclick="nav('scr-menu')">رجوع</button>
+    </div>
+
+    <div id="scr-levels" class="screen">
+        <h2 style="margin: 0 0 15px 0;">خريطة المغامرة 🗺️</h2>
+        <div id="lvl-list"></div>
+        <button class="btn btn-red" style="margin-top:20px" onclick="nav('scr-cat')">رجوع</button>
+    </div>
+
+    <div id="scr-game" class="screen">
+        <button onclick="togglePause()" style="position:absolute; top:15px; left:15px; width:45px; height:45px; border-radius:12px; border:3px solid var(--dark); background:white; font-size:1.2rem; cursor:pointer; z-index:10;">⏸️</button>
+        <button id="powerup-spyglass" onclick="useSpyglass()" style="position: absolute; bottom: 80px; right: 20px; width: 65px; height: 65px; background: var(--yellow); border: 4px solid var(--dark); border-radius: 50%; font-size: 2rem; display: none; z-index: 50; cursor: pointer; box-shadow: 0 5px 0 var(--dark); animation: pulse 1s infinite alternate;">🔍</button>
+        
+        <div class="game-stats">
+            <span>⭐ لـ : <span id="txt-lvl">1</span></span>
+            <span style="color:var(--pink);">🏆 : <span id="txt-score">0</span></span>
+            <span>🧠 : <span id="txt-moves">0</span></span>
+        </div>
+        <div id="timer-wrap"><div id="timer-fill"></div></div>
+        <div id="game-board" class="grid"></div>
+    </div>
+
+    <div id="scr-pause" class="screen">
+        <h1 style="color:var(--purple);">توقف مؤقت ⏸️</h1>
+        <button class="btn btn-yellow" onclick="togglePause()">إستئناف ▶️</button>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+            <button class="btn" style="width:70px; height:70px; border-radius: 50%;" onclick="retryLevel()">🔄</button>
+            <button class="btn btn-mute-all" style="width:70px; height:70px; border-radius: 50%;" onclick="toggleMute()">🔊</button>
+            <button class="btn btn-red" style="width:70px; height:70px; border-radius: 50%;" onclick="exitGame()">🚪</button>
+        </div>
+    </div>
+
+    <div id="scr-fail" class="screen">
+        <h1 style="color:var(--pink);">انتهى الوقت! 🎈</h1>
+        <div style="background:#f9f9f9; padding:15px; border-radius:20px; border:3px solid var(--dark);">
+            <h2 id="final-score-text">مجموع نقاطك: 0</h2>
+            <input type="text" id="player-name" placeholder="اسم البطل">
+        </div>
+        <div style="display:flex; justify-content:center; gap:25px; margin-top:15px;">
+            <span id="badge-spyglass" class="badge-icon">🔍</span>
+            <span id="badge-highscore" class="badge-icon">🥇</span>
+        </div>
+        <button class="btn btn-yellow" onclick="saveAndRestart()">حفظ ومحاولة جديدة 🔄</button>
+        <button class="btn btn-red" onclick="nav('scr-menu')">خروج</button>
+    </div>
+
+    <div id="scr-win" class="screen">
+        <h1 style="color:var(--blue);">أحسنت يا ذكي! 🎉</h1>
+        <h2 id="win-score-text">نقاطك الحالية: 0</h2>
+        <button class="btn btn-yellow" onclick="nextLevel()">المستوى التالي ➡️</button>
+        <button class="btn btn-red" onclick="nav('scr-menu')">القائمة الرئيسية</button>
+    </div>
+
+    <div id="scr-high" class="screen">
+        <h2>🏆 لوحة الأبطال</h2>
+        <table style="width:100%; border-collapse:collapse; margin:10px 0;">
+            <thead style="background:var(--dark); color:#fff;"><tr><th>البطل</th><th>النقاط</th><th>لـ</th></tr></thead>
+            <tbody id="score-body"></tbody>
+        </table>
+        <button class="btn btn-red" onclick="nav('scr-menu')">رجوع</button>
+    </div>
+
+    <script>
+        const sounds = {
+            click: new Audio('click.mp3'), correct: new Audio('correct.mp3'),
+            error: new Audio('error.mp3'), win: new Audio('win.mp3'),
+            fail: new Audio('fail.mp3'), timer: new Audio('timer.mp3')
+        };
+
+        const DATA = {
+            ar: ['أ','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','هـ','و','ي'],
+            num: ['١','٢','٣','٤','٥','٦','٧','٨','٩','٠'],
+            animals: ['🦁','🐯','🦒','🐘','🦊','🐱','🐶','🐰','🐼','🐸','🦄','🐥','🐙','🦓'],
+            objects: ['🚀','🎈','🎁','🚗','🚲','🍎','⚽','🎸','🍦','🍕','⏰','🎨','🌈','🍭']
+        };
+
+        let currentLevel = 1, gameTimer, timeLeft, totalTime, flipped = [], matches = 0, moves = 0;
+        let totalScore = 0, isMuted = false, comboCount = 0, powerupActive = false, selectedCat = 'ar';
+        let isPaused = false;
+        let achievements = { spyglass: false, highscore: false };
+
+        // Background
+        const bg = document.getElementById('bg-bubbles');
+        for(let i=0; i<15; i++){
+            let li = document.createElement('li');
+            li.style.left = Math.random()*100+'%'; li.style.width = li.style.height = (Math.random()*60+20)+'px';
+            li.style.animationDelay = Math.random()*10+'s'; bg.appendChild(li);
+        }
+
+        function play(s) { if(sounds[s] && !isMuted) { sounds[s].currentTime=0; sounds[s].play().catch(()=>{}); }}
+        
+        function toggleMute() {
+            isMuted = !isMuted;
+            const icon = isMuted ? '🔇' : '🔊';
+            document.querySelectorAll('.btn-mute-all').forEach(b => b.innerText = icon);
+            play('click');
+        }
+
+        function nav(id) {
+            play('click');
+            isPaused = false;
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'scr-levels') renderLevels();
+            if(id === 'scr-high') renderScores();
+            clearInterval(gameTimer);
+        }
+
+        function setCat(cat) { selectedCat = cat; nav('scr-levels'); }
+
+        function renderLevels() {
+            const list = document.getElementById('lvl-list');
+            list.innerHTML = '';
+            for(let i=1; i<=20; i++){
+                const b = document.createElement('div');
+                b.className = 'lvl-bubble';
+                b.innerText = i;
+                b.onclick = () => startGame(i);
+                list.appendChild(b);
+            }
+        }
+
+        function startGame(lvl) {
+            currentLevel = lvl; matches = 0; moves = 0; flipped = []; comboCount = 0;
+            powerupActive = false; isPaused = false;
+            
+            document.getElementById('powerup-spyglass').style.display = 'none';
+            nav('scr-game');
+            updateStats();
+            
+            let pool = DATA[selectedCat];
+            let count = lvl > 12 ? 16 : lvl > 6 ? 12 : 8;
+            let selected = pool.sort(() => 0.5 - Math.random()).slice(0, count/2);
+            let deck = [...selected, ...selected].sort(() => 0.5 - Math.random());
+
+            const board = document.getElementById('game-board');
+            board.innerHTML = ''; board.style.gridTemplateColumns = `repeat(4, 75px)`;
+
+            deck.forEach(s => {
+                const c = document.createElement('div');
+                c.className = 'card'; c.dataset.s = s;
+                c.innerHTML = `<div class="card-face card-back">❓</div><div class="card-face card-front">${s}</div>`;
+                c.onclick = () => flipCard(c);
+                board.appendChild(c);
+            });
+
+            totalTime = Math.max(10, 45 - (lvl * 1.5));
+            timeLeft = totalTime;
+            runTimer();
+        }
+
+        function runTimer() {
+            const fill = document.getElementById('timer-fill');
+            gameTimer = setInterval(() => {
+                if(!isPaused) {
+                    timeLeft -= 0.1;
+                    fill.style.width = (timeLeft/totalTime*100)+'%';
+                    if(timeLeft <= 0) { clearInterval(gameTimer); play('fail'); showFailScreen(); }
+                }
+            }, 100);
+        }
+
+        function flipCard(card) {
+            if(isPaused || flipped.length >= 2 || card.classList.contains('flipped')) return;
+            
+            card.classList.add('flipped');
+            flipped.push(card);
+            
+            if(flipped.length === 2) {
+                moves++;
+                const [c1, c2] = flipped;
+                if(c1.dataset.s === c2.dataset.s) {
+                    play('correct'); totalScore += 10; comboCount++; matches += 2; flipped = [];
+                    if(comboCount >= 2) showCombo();
+                    if(comboCount === 3) { achievements.spyglass = true; powerupActive = true; document.getElementById('powerup-spyglass').style.display = 'block'; }
+                    if(matches === document.querySelectorAll('.card').length) { clearInterval(gameTimer); play('win'); setTimeout(showWinScreen, 600); }
+                } else {
+                    comboCount = 0;
+                    setTimeout(() => { play('error'); c1.classList.remove('flipped'); c2.classList.remove('flipped'); flipped = []; }, 800);
+                }
+                updateStats();
+            }
+        }
+
+        function togglePause() {
+            if(document.getElementById('scr-game').classList.contains('active')) {
+                isPaused = !isPaused;
+                const ps = document.getElementById('scr-pause');
+                if(isPaused) {
+                    ps.classList.add('active');
+                } else {
+                    ps.classList.remove('active');
+                }
+                play('click');
+            }
+        }
+
+        function retryLevel() {
+            document.getElementById('scr-pause').classList.remove('active');
+            startGame(currentLevel);
+        }
+
+        function exitGame() {
+            document.getElementById('scr-pause').classList.remove('active');
+            nav('scr-menu');
+        }
+
+        function useSpyglass() {
+            if(!powerupActive || isPaused) return;
+            play('click'); powerupActive = false;
+            document.getElementById('powerup-spyglass').style.display = 'none';
+            document.querySelectorAll('.card').forEach(c => c.classList.add('flipped'));
+            setTimeout(() => {
+                document.querySelectorAll('.card').forEach(c => {
+                    const isMatched = Array.from(document.querySelectorAll('.card')).filter(card => card.classList.contains('flipped')).length === 0; // Simplified check
+                    if(!c.dataset.matched) c.classList.remove('flipped');
+                });
+            }, 1500);
+        }
+
+        function showCombo() {
+            const ct = document.getElementById('combo-text');
+            ct.innerText = `COMBO X${comboCount}! 🔥`; ct.style.display = 'block';
+            setTimeout(() => ct.style.display = 'none', 800);
+        }
+
+        function updateStats() {
+            document.getElementById('txt-lvl').innerText = currentLevel;
+            document.getElementById('txt-score').innerText = totalScore;
+            document.getElementById('txt-moves').innerText = moves;
+        }
+
+        function showWinScreen() {
+            document.getElementById('win-score-text').innerText = `نقاطك الحالية: ${totalScore}`;
+            nav('scr-win');
+        }
+
+        function showFailScreen() {
+            document.getElementById('final-score-text').innerText = `نقاطك: ${totalScore}`;
+            if(totalScore > 100) achievements.highscore = true;
+            if(achievements.spyglass) document.getElementById('badge-spyglass').classList.add('unlocked');
+            if(achievements.highscore) document.getElementById('badge-highscore').classList.add('unlocked');
+            nav('scr-fail');
+        }
+
+        function saveAndRestart() {
+            const name = document.getElementById('player-name').value || "بطل مجهول";
+            let s = JSON.parse(localStorage.getItem('bubblePro')) || [];
+            s.push({ name, score: totalScore, lvl: currentLevel });
+            s.sort((a,b) => b.score - a.score);
+            localStorage.setItem('bubblePro', JSON.stringify(s.slice(0, 10)));
+            resetGame(); nav('scr-menu');
+        }
+
+        function resetGame() { totalScore = 0; achievements = { spyglass: false, highscore: false }; }
+
+        function renderScores() {
+            let s = JSON.parse(localStorage.getItem('bubblePro')) || [];
+            document.getElementById('score-body').innerHTML = s.map(x => `<tr><td>${x.name}</td><td>${x.score}</td><td>${x.lvl}</td></tr>`).join('');
+        }
+
+        function nextLevel() { startGame(currentLevel + 1); }
+    </script>
+</body>
+</html>

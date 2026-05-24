@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مغامرة الذاكرة الذكية</title>
+    <style>
+        :root {
+            --primary: #FF6B6B; --secondary: #4ECDC4; --accent: #FFE66D;
+            --white: #FFFFFF; --grad: linear-gradient(135deg, #6e8efb, #a777e3);
+        }
+
+        /* Prevent Scrolling */
+        * { scrollbar-width: none; -ms-overflow-style: none; box-sizing: border-box; }
+        *::-webkit-scrollbar { display: none; }
+
+        body {
+            font-family: 'Arial', sans-serif; background: var(--grad); margin: 0; 
+            height: 100vh; width: 100vw; display: flex; justify-content: center; 
+            align-items: center; overflow: hidden; touch-action: none;
+        }
+
+        .screen {
+            display: none; width: 92%; max-width: 450px; background: var(--white);
+            border-radius: 35px; padding: 25px; text-align: center;
+            box-shadow: 0 15px 0px rgba(0,0,0,0.1), 0 20px 30px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .screen.active { display: block; animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .btn {
+            background: var(--secondary); color: white; border: none;
+            padding: 15px 20px; border-radius: 20px; font-size: 1.4rem;
+            font-weight: 900; margin: 8px 0; cursor: pointer;
+            box-shadow: 0 8px 0 #39b3aa; transition: 0.1s; width: 85%;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #39b3aa; }
+        .btn-red { background: var(--primary); box-shadow: 0 8px 0 #e05a5a; }
+        
+        /* Category Grid */
+        .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+        .cat-btn { 
+            background: #f8f9fa; border: 3px solid #ddd; padding: 15px; border-radius: 20px;
+            font-weight: 900; cursor: pointer; transition: 0.2s; font-size: 1.1rem;
+        }
+        .cat-btn:hover { border-color: var(--secondary); background: #e0fcf9; }
+        .cat-icon { font-size: 2rem; display: block; margin-bottom: 5px; }
+
+        .controls { display: flex; gap: 10px; justify-content: center; align-items: center; }
+        .btn-small { width: 55px; height: 55px; padding: 0; border-radius: 18px; font-size: 1.4rem; }
+
+        .overlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(47, 47, 47, 0.95); border-radius: 35px;
+            z-index: 100; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .overlay.active { display: flex; }
+
+        .grid { display: grid; gap: 8px; justify-content: center; margin: 10px auto; }
+        .card { width: 70px; height: 70px; position: relative; transform-style: preserve-3d; transition: 0.3s; cursor: pointer;}
+        .card.flipped { transform: rotateY(180deg); }
+        
+        .card-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            border-radius: 15px; display: flex; align-items: center; justify-content: center;
+            font-size: 2.3rem; font-weight: 900; border: 4px solid #f0f0f0;
+        }
+        .card-back { background: #2f2f2f; color: white; }
+        .card-front { background: white; transform: rotateY(180deg); color: var(--primary); }
+        
+        #timer-wrap { width: 100%; height: 22px; background: #eee; border-radius: 12px; margin: 10px 0; overflow: hidden; position: relative; }
+        #timer-fill { width: 100%; height: 100%; background: var(--primary); transition: width 0.1s linear; }
+        .timer-warning { animation: pulseRed 0.5s infinite alternate; }
+        @keyframes pulseRed { from { background: var(--primary); } to { background: #ff0000; } }
+
+        #lvl-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; padding: 10px; }
+        .lvl-btn { background: var(--accent); padding: 10px; border-radius: 10px; border: 3px solid #edcf45; font-weight: 900; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="scr-menu" class="screen active">
+        <h1 style="color: var(--primary); font-size: 2.5rem;">🐾 غابة الأبطال</h1>
+        <button class="btn" onclick="startIntro(); nav('scr-cat')">إلعب</button>
+        <div class="controls" style="margin: 10px 0;">
+            <button class="btn btn-small" id="btn-mute-main" onclick="toggleMute()">🔊</button>
+            <button class="btn btn-red btn-small" onclick="nav('scr-high')">🏆</button>
+        </div>
+        <button class="btn btn-red" onclick="nav('scr-dev')">المبرمج</button>
+    </div>
+
+    <div id="scr-cat" class="screen">
+        <h2 style="font-weight: 900;">ماذا تريد أن تتعلم؟ 🧐</h2>
+        <div class="cat-grid">
+            <div class="cat-btn" onclick="setCat('ar')"><span class="cat-icon">أ</span>حروف</div>
+            <div class="cat-btn" onclick="setCat('num')"><span class="cat-icon">٩</span>أرقام</div>
+            <div class="cat-btn" onclick="setCat('animals')"><span class="cat-icon">🦁</span>حيوانات</div>
+            <div class="cat-btn" onclick="setCat('objects')"><span class="cat-icon">🚀</span>أشياء</div>
+            <div class="cat-btn" style="grid-column: span 2" onclick="setCat('mix')"><span class="cat-icon">🌈</span>خليط ممتع</div>
+        </div>
+        <button class="btn btn-red" onclick="nav('scr-menu')">رجوع</button>
+    </div>
+
+    <div id="scr-levels" class="screen">
+        <h2>اختر مرحلة 🗺️</h2>
+        <div id="lvl-list"></div>
+        <button class="btn btn-red" onclick="nav('scr-cat')">تغيير النوع</button>
+    </div>
+
+    <div id="scr-game" class="screen">
+        <div id="pause-overlay" class="overlay">
+            <h1 style="color: white; margin-bottom: 20px;">⏸️ استراحة</h1>
+            <button class="btn" onclick="resumeGame()">استمرار</button>
+            <button class="btn" onclick="startGame(currentLevel)">إعادة</button>
+            <button class="btn btn-red" onclick="nav('scr-menu')">خروج</button>
+        </div>
+        <div style="display:flex; justify-content: space-between; align-items: center; font-weight:900;">
+            <span>مستوى: <span id="txt-lvl">1</span></span>
+            <div class="controls">
+                <button class="btn btn-small" id="btn-mute-game" onclick="toggleMute()">🔊</button>
+                <button class="btn btn-small" onclick="pauseGame()">⏸️</button>
+            </div>
+            <span>محاولات: <span id="txt-moves">0</span></span>
+        </div>
+        <div id="timer-wrap"><div id="timer-fill"></div></div>
+        <div id="game-board" class="grid"></div>
+    </div>
+
+    <div id="scr-win" class="screen">
+        <h1 style="color:var(--secondary); font-size: 3rem;">عبقري! 🎉</h1>
+        <button class="btn" onclick="nextLevel()">التالي ➡️</button>
+        <button class="btn btn-red" onclick="nav('scr-menu')">القائمة</button>
+    </div>
+
+    <div id="scr-fail" class="screen">
+        <h1 style="color:var(--primary); font-size: 3rem;">انتهى الوقت!</h1>
+        <button class="btn" onclick="startGame(currentLevel)">حاول ثانية</button>
+        <button class="btn btn-red" onclick="nav('scr-menu')">القائمة</button>
+    </div>
+
+    <div id="scr-high" class="screen"><h2>الأبطال 🏆</h2><div id="score-list"></div><button class="btn btn-red" onclick="nav('scr-menu')">رجوع</button></div>
+    <div id="scr-dev" class="screen"><h2>المبرمج 👨‍💻</h2><p>ذكاء اصطناعي للأطفال</p><button class="btn btn-red" onclick="nav('scr-menu')">رجوع</button></div>
+
+    <script>
+        const sounds = {
+            intro: new Audio('intro.mp3'), click: new Audio('click.mp3'),
+            correct: new Audio('correct.mp3'), error: new Audio('error.mp3'),
+            win: new Audio('win.mp3'), fail: new Audio('fail.mp3'), timer: new Audio('timer.mp3')
+        };
+
+        const DATA = {
+            ar: ['أ','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','هـ','و','ي'],
+            num: ['١','٢','٣','٤','٥','٦','٧','٨','٩','٠'],
+            animals: ['🦁','🐯','🦒','🐘','🦊','🐱','🐶','🐰','🐼','🐸','🦄','🐥','🐝','🐙'],
+            objects: ['🚀','🎈','🎁','🚗','🚲','🍎','⚽','🎸','🍦','🍕','⏰','💎','🎨','🌈']
+        };
+
+        let currentLevel = 1, gameTimer, timeLeft, totalTime, flipped = [], matches = 0, moves = 0, 
+            isPaused = false, isMuted = false, introStarted = false, timerPlayed = false, selectedCat = 'mix';
+
+        function play(s) { if (sounds[s] && !isMuted) { sounds[s].currentTime = 0; sounds[s].play().catch(()=>{}); } }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const icon = isMuted ? '🔇' : '🔊';
+            document.getElementById('btn-mute-main').innerText = icon;
+            document.getElementById('btn-mute-game').innerText = icon;
+            if (isMuted) Object.values(sounds).forEach(a => a.pause());
+            else if (introStarted) sounds.intro.play().catch(()=>{});
+            play('click');
+        }
+
+        function startIntro() { if (!introStarted) { play('intro'); introStarted = true; } }
+
+        function nav(id) {
+            play('click');
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'scr-levels') renderLevels();
+            clearInterval(gameTimer);
+            isPaused = false;
+        }
+
+        function setCat(cat) {
+            selectedCat = cat;
+            nav('scr-levels');
+        }
+
+        function renderLevels() {
+            const list = document.getElementById('lvl-list');
+            list.innerHTML = '';
+            for(let i=1; i<=20; i++) {
+                const b = document.createElement('div');
+                b.className = 'lvl-btn'; b.innerText = i;
+                b.onclick = () => startGame(i);
+                list.appendChild(b);
+            }
+        }
+
+        function startGame(lvl) {
+            currentLevel = lvl; timerPlayed = false;
+            nav('scr-game');
+            document.getElementById('txt-lvl').innerText = lvl;
+            matches = 0; moves = 0; flipped = [];
+            document.getElementById('txt-moves').innerText = 0;
+            document.getElementById('timer-fill').classList.remove('timer-warning');
+
+            let pool = [];
+            if(selectedCat === 'mix') pool = [...DATA.ar, ...DATA.num, ...DATA.animals, ...DATA.objects];
+            else pool = DATA[selectedCat];
+
+            let count = lvl > 15 ? 16 : lvl > 8 ? 12 : 8;
+            let selected = pool.sort(() => 0.5 - Math.random()).slice(0, count/2);
+            let deck = [...selected, ...selected].sort(() => 0.5 - Math.random());
+
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+            board.style.gridTemplateColumns = `repeat(4, 70px)`;
+
+            deck.forEach(s => {
+                const c = document.createElement('div');
+                c.className = 'card'; c.dataset.s = s;
+                c.innerHTML = `<div class="card-face card-back">؟</div><div class="card-face card-front">${s}</div>`;
+                c.onclick = () => flipCard(c);
+                board.appendChild(c);
+            });
+
+            totalTime = Math.max(8, 45 - (lvl * 1.5));
+            timeLeft = totalTime;
+            runTimer();
+        }
+
+        function runTimer() {
+            const fill = document.getElementById('timer-fill');
+            gameTimer = setInterval(() => {
+                if (!isPaused) {
+                    timeLeft -= 0.1;
+                    fill.style.width = (timeLeft / totalTime * 100) + "%";
+                    if (timeLeft <= 3.1 && timeLeft > 2.9 && !timerPlayed) {
+                        play('timer'); fill.classList.add('timer-warning'); timerPlayed = true;
+                    }
+                    if (timeLeft <= 0) { clearInterval(gameTimer); play('fail'); nav('scr-fail'); }
+                }
+            }, 100);
+        }
+
+        function flipCard(card) {
+            if(isPaused || flipped.length < 2 && !card.classList.contains('flipped')) {
+                card.classList.add('flipped');
+                flipped.push(card);
+                if(flipped.length === 2) {
+                    moves++; document.getElementById('txt-moves').innerText = moves;
+                    const [c1, c2] = flipped;
+                    if(c1.dataset.s === c2.dataset.s) {
+                        play('correct'); timeLeft = Math.min(totalTime, timeLeft + 3); 
+                        if (timeLeft > 3) { timerPlayed = false; document.getElementById('timer-fill').classList.remove('timer-warning'); }
+                        c1.classList.add('matched'); c2.classList.add('matched');
+                        matches += 2; flipped = [];
+                        if(matches === document.querySelectorAll('.card').length) {
+                            clearInterval(gameTimer); play('win');
+                            setTimeout(() => nav('scr-win'), 600);
+                        }
+                    } else {
+                        setTimeout(() => { play('error'); c1.classList.remove('flipped'); c2.classList.remove('flipped'); flipped = []; }, 800);
+                    }
+                }
+            }
+        }
+
+        function pauseGame() { isPaused = true; document.getElementById('pause-overlay').classList.add('active'); play('click'); }
+        function resumeGame() { isPaused = false; document.getElementById('pause-overlay').classList.remove('active'); play('click'); }
+        function nextLevel() { startGame(currentLevel + 1); }
+    </script>
+</body>
+</html>

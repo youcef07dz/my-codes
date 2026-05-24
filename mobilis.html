@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOBILISREVOLUTION</title>
+
+<style>
+:root {
+  --green: #00ff9c;
+  --blue: #00bfff;
+  --dark: #061a2b;
+  --white: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #0a2a43, #020b14);
+  color: var(--white);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+body[dir="rtl"] {
+  text-align: right;
+}
+
+.app {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+}
+
+.header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.lang-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: linear-gradient(90deg, var(--green), var(--blue));
+  border: none;
+  border-radius: 10px;
+  padding: 6px 12px;
+  color: #002;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+body[dir="rtl"] .lang-btn {
+  right: auto;
+  left: 0;
+}
+
+.logo {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, var(--green), var(--blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.card {
+  background: rgba(255,255,255,0.05);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 0 25px rgba(0,255,156,0.15);
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+input {
+  width: 100%;
+  padding: 16px;
+  font-size: 20px;
+  border-radius: 14px;
+  border: none;
+  outline: none;
+background: linear-gradient(135deg, rgba(0,255,156,0.15), rgba(0,191,255,0.15));
+  color: var(--white);
+  text-align: center;
+}
+
+.results {
+  display: grid;
+  gap: 15px;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(0,255,156,0.15), rgba(0,191,255,0.15));
+  border-radius: 14px;
+  padding: 14px;
+}
+
+body[dir="rtl"] .result {
+  flex-direction: row-reverse;
+}
+
+.icon {
+  font-size: 28px;
+  margin: 0 14px;
+}
+
+.value {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.label {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 12px;
+  opacity: 0.6;
+}
+</style>
+</head>
+
+<body dir="ltr">
+<div class="app">
+
+  <div class="header">
+    <button class="lang-btn" onclick="toggleLang()">AR</button>
+    <div class="logo">MOBILIS<br>REVOLUTION</div><br>
+    <div class="subtitle" id="subtitle">MU Conversion System</div>
+  </div>
+
+  <div class="card">
+    <div class="input-group">
+      <input
+        type="number"
+        id="muInput"
+        placeholder="Enter MU (e.g. 1250)"
+        oninput="convertMU()"
+      />
+    </div>
+
+    <div class="results">
+      <div class="result">
+        <div class="icon">📶</div>
+        <div>
+          <div class="value" id="internet">0 GB</div>
+          <div class="label" id="lblInternet">Internet Data</div>
+        </div>
+      </div>
+
+      <div class="result">
+        <div class="icon">📞</div>
+        <div>
+          <div class="value" id="calls">0 Minutes</div>
+          <div class="label" id="lblCalls">Call Time</div>
+        </div>
+      </div>
+
+      <div class="result">
+        <div class="icon">💬</div>
+        <div>
+          <div class="value" id="sms">0 SMS</div>
+          <div class="label" id="lblSms">Text Messages</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer" id="footer">
+    © 2025 MOBILIS REVOLUTION
+  </div>
+
+</div>
+
+<script>
+let currentLang = 'en';
+
+function convertMU() {
+  const mu = Number(document.getElementById('muInput').value) || 0;
+  document.getElementById('internet').textContent = (mu / 50).toFixed(2) + ' GB';
+  document.getElementById('calls').textContent = Math.floor(mu / 5) + 
+    (currentLang === 'ar' ? ' دقيقة' : ' Minutes');
+  document.getElementById('sms').textContent = Math.floor(mu / 10) + 
+    (currentLang === 'ar' ? ' رسالة' : ' SMS');
+}
+
+function toggleLang() {
+  const body = document.body;
+  const btn = document.querySelector('.lang-btn');
+
+  if (currentLang === 'en') {
+    currentLang = 'ar';
+    body.setAttribute('dir', 'rtl');
+    btn.textContent = 'EN';
+
+    document.getElementById('subtitle').textContent = 'نظام تحويل الوحدات';
+    document.getElementById('muInput').placeholder = 'أدخل عدد الوحدات (مثال 1250)';
+    document.getElementById('lblInternet').textContent = 'بيانات الإنترنت';
+    document.getElementById('lblCalls').textContent = 'المكالمات';
+    document.getElementById('lblSms').textContent = 'الرسائل النصية';
+  } else {
+    currentLang = 'en';
+    body.setAttribute('dir', 'ltr');
+    btn.textContent = 'AR';
+
+    document.getElementById('subtitle').textContent = 'MU Conversion System';
+    document.getElementById('muInput').placeholder = 'Enter MU (e.g. 1250)';
+    document.getElementById('lblInternet').textContent = 'Internet Data';
+    document.getElementById('lblCalls').textContent = 'Call Time';
+    document.getElementById('lblSms').textContent = 'Text Messages';
+  }
+
+  convertMU();
+}
+</script>
+
+</body>
+</html>

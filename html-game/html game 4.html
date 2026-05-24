@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>فقاعات الذاكرة ثلاثية الأبعاد</title>
+    <style>
+        :root {
+            --bubble-pink: #FF6B9D; --bubble-blue: #4D96FF; --bubble-yellow: #FFD93D;
+            --bubble-green: #6BCF7F; --bubble-purple: #9D65C9; --bubble-orange: #FF9A3D;
+            --bubble-cyan: #4DCCBD; --bubble-red: #FF5C5C; --dark: #2D3047;
+            --light-bg: #F0F7FF; --shadow: rgba(0, 0, 0, 0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+
+        body {
+            font-family: 'Segoe UI', 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; overflow: hidden; display: flex;
+            justify-content: center; align-items: center; perspective: 1000px;
+        }
+
+        /* 3D Background Bubbles */
+        .bubble-bg { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; overflow: hidden; }
+        .floating-bubble {
+            position: absolute; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), rgba(255,255,255,0.05));
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.1), inset 5px 5px 10px rgba(255,255,255,0.3);
+            animation: floatBubble 10s infinite alternate ease-in-out;
+        }
+
+        @keyframes floatBubble {
+            0% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(-100px) rotate(360deg); }
+        }
+
+        /* Main Container */
+        .bubble-3d {
+            position: relative; width: 95%; max-width: 420px;
+            background: radial-gradient(circle at 30% 30%, var(--light-bg), #d6e6ff);
+            border-radius: 40px; padding: 25px;
+            box-shadow: 0 30px 50px rgba(0,0,0,0.3), inset 0 -5px 10px rgba(0,0,0,0.1);
+            transform: rotateY(-5deg) rotateX(5deg);
+            border: 6px solid rgba(255,255,255,0.5);
+        }
+
+        .screen { display: none; }
+        .screen.active { display: block; animation: screenPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        @keyframes screenPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .bubble-title { font-size: 2.2rem; color: var(--dark); text-align: center; margin-bottom: 20px; }
+
+        .bubble-btn {
+            background: radial-gradient(circle at 30% 30%, var(--bubble-blue), #3a7fff);
+            color: white; border: none; padding: 15px; border-radius: 50px;
+            font-size: 1.2rem; font-weight: bold; margin: 10px 0; cursor: pointer;
+            width: 100%; box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: 0.3s;
+        }
+
+        .bubble-btn:active { transform: scale(0.95); }
+        .bubble-btn.yellow { background: radial-gradient(circle at 30% 30%, var(--bubble-yellow), #ffc800); color: var(--dark); }
+
+        /* Grid and Cards */
+        .bubble-grid { display: grid; gap: 10px; justify-content: center; margin: 20px auto; }
+        .bubble-card { width: 75px; height: 75px; position: relative; transform-style: preserve-3d; transition: 0.5s; cursor: pointer; }
+        .bubble-card.flipped { transform: rotateY(180deg); }
+        
+        .card-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
+        }
+        .card-back { background: var(--bubble-purple); color: white; border: 3px solid white; }
+        .card-front { background: white; transform: rotateY(180deg); color: var(--dark); border: 3px solid var(--bubble-blue); }
+
+        .bubble-timer { width: 100%; height: 15px; background: #ddd; border-radius: 10px; margin: 15px 0; overflow: hidden; }
+        .timer-fill { height: 100%; background: var(--bubble-green); width: 100%; transition: 0.1s linear; }
+
+        .bubble-stats { display: flex; justify-content: space-between; font-weight: bold; color: var(--dark); }
+
+        /* Special Effects */
+        .bubble-pop {
+            position: fixed; width: 30px; height: 30px; border-radius: 50%;
+            background: white; pointer-events: none; animation: pop 0.4s forwards;
+        }
+        @keyframes pop { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<div class="bubble-bg" id="bubble-bg"></div>
+
+<div class="bubble-3d">
+    <div id="scr-menu" class="screen active">
+        <h1 class="bubble-title">🫧 فقاعات الذاكرة 🫧</h1>
+        <button class="bubble-btn yellow" onclick="nav('scr-cat')">ابدأ اللعب 🚀</button>
+        <button class="bubble-btn" onclick="nav('scr-high')">🏆 المتصدرون</button>
+        <button class="bubble-btn" id="mute-btn" onclick="toggleMute()">🔊 الصوت</button>
+    </div>
+
+    <div id="scr-cat" class="screen">
+        <h2 class="bubble-title">اختر العالم ✨</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button class="bubble-btn" onclick="setCat('ar')">🔠 حروف</button>
+            <button class="bubble-btn yellow" onclick="setCat('num')">🔢 أرقام</button>
+            <button class="bubble-btn yellow" onclick="setCat('animals')">🦁 حيوانات</button>
+            <button class="bubble-btn" onclick="setCat('objects')">🎮 أشياء</button>
+        </div>
+        <button class="bubble-btn yellow" onclick="nav('scr-menu')" style="margin-top:20px">رجوع ↩️</button>
+    </div>
+
+    <div id="scr-game" class="screen">
+        <div class="bubble-stats">
+            <span>مستوى: <span id="txt-lvl">1</span></span>
+            <span>نقاط: <span id="txt-score">0</span></span>
+        </div>
+        <div class="bubble-timer"><div id="timer-fill" class="timer-fill"></div></div>
+        <div id="game-board" class="bubble-grid"></div>
+        <button class="bubble-btn yellow" onclick="togglePause()">⏸️ إيقاف</button>
+    </div>
+
+    <div id="scr-win" class="screen">
+        <h2 class="bubble-title">🎉 أحسنت! 🎉</h2>
+        <h3 id="win-score-text" style="text-align:center">النقاط: 0</h3>
+        <button class="bubble-btn yellow" onclick="nextLevel()">المستوى التالي ➡️</button>
+        <button class="bubble-btn" onclick="nav('scr-menu')">القائمة الرئيسية</button>
+    </div>
+
+    <div id="scr-fail" class="screen">
+        <h2 class="bubble-title" style="color:var(--bubble-red)">💥 انتهى الوقت!</h2>
+        <input type="text" id="player-name" placeholder="ادخل اسمك" style="width:100%; padding:10px; border-radius:20px; text-align:center; margin-bottom:10px;">
+        <button class="bubble-btn yellow" onclick="saveAndRestart()">حاول ثانية 🔄</button>
+        <button class="bubble-btn" onclick="nav('scr-menu')">خروج</button>
+    </div>
+
+    <div id="scr-high" class="screen">
+        <h2 class="bubble-title">🏆 الأبطال</h2>
+        <div id="score-body" style="color:var(--dark); text-align:center; margin-bottom:20px"></div>
+        <button class="bubble-btn" onclick="nav('scr-menu')">رجوع</button>
+    </div>
+</div>
+
+<script>
+    const BUBBLE_DATA = {
+        ar: ['أ','ب','ت','ث','ج','ح','خ','د'],
+        num: ['١','٢','٣','٤','٥','٦','٧','٨'],
+        animals: ['🦁','🐯','🦒','🐘','🦊','🐱','🐶','🐰'],
+        objects: ['🚀','🎈','🎁','🚗','🚲','🍎','⚽','🎸']
+    };
+
+    let currentLevel = 1, gameTimer, timeLeft, totalTime, flipped = [], matches = 0, totalScore = 0;
+    let isMuted = false, isPaused = false, selectedCat = 'ar';
+
+    // Sound System
+    function playSound(freq, type="sine") {
+        if (isMuted) return;
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = type; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        osc.start(); osc.stop(ctx.currentTime + 0.5);
+    }
+
+    function nav(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'scr-high') renderScores();
+        clearInterval(gameTimer);
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        document.getElementById('mute-btn').innerText = isMuted ? '🔇 مكتوم' : '🔊 الصوت';
+    }
+
+    function setCat(cat) {
+        selectedCat = cat;
+        startGame(1);
+    }
+
+    function startGame(lvl) {
+        currentLevel = lvl; matches = 0; flipped = []; isPaused = false;
+        nav('scr-game');
+        document.getElementById('txt-lvl').innerText = lvl;
+        
+        const pool = BUBBLE_DATA[selectedCat];
+        const deck = [...pool, ...pool].sort(() => Math.random() - 0.5);
+        
+        const board = document.getElementById('game-board');
+        board.innerHTML = '';
+        board.style.gridTemplateColumns = 'repeat(4, 1fr)';
+
+        deck.forEach((symbol) => {
+            const card = document.createElement('div');
+            card.className = 'bubble-card';
+            card.innerHTML = `<div class="card-face card-back">❓</div><div class="card-face card-front">${symbol}</div>`;
+            card.dataset.symbol = symbol;
+            card.onclick = () => flipCard(card);
+            board.appendChild(card);
+        });
+
+        totalTime = 40; timeLeft = totalTime;
+        runTimer();
+    }
+
+    function runTimer() {
+        gameTimer = setInterval(() => {
+            if (!isPaused) {
+                timeLeft -= 0.1;
+                document.getElementById('timer-fill').style.width = (timeLeft / totalTime * 100) + '%';
+                if (timeLeft <= 0) { clearInterval(gameTimer); nav('scr-fail'); }
+            }
+        }, 100);
+    }
+
+    function flipCard(card) {
+        if (isPaused || flipped.length >= 2 || card.classList.contains('flipped')) return;
+        playSound(440);
+        card.classList.add('flipped');
+        flipped.push(card);
+
+        if (flipped.length === 2) {
+            const [c1, c2] = flipped;
+            if (c1.dataset.symbol === c2.dataset.symbol) {
+                playSound(880, "square");
+                matches += 2;
+                totalScore += 10;
+                flipped = [];
+                if (matches === 16) { clearInterval(gameTimer); document.getElementById('win-score-text').innerText = "النقاط: " + totalScore; nav('scr-win'); }
+            } else {
+                setTimeout(() => {
+                    c1.classList.remove('flipped');
+                    c2.classList.remove('flipped');
+                    flipped = [];
+                }, 1000);
+            }
+        }
+        document.getElementById('txt-score').innerText = totalScore;
+    }
+
+    function togglePause() { isPaused = !isPaused; }
+
+    function nextLevel() { startGame(currentLevel + 1); }
+
+    function saveAndRestart() {
+        const name = document.getElementById('player-name').value || "بطل";
+        let scores = JSON.parse(localStorage.getItem('bubble_scores') || "[]");
+        scores.push({name, score: totalScore});
+        localStorage.setItem('bubble_scores', JSON.stringify(scores.slice(-5)));
+        totalScore = 0; startGame(1);
+    }
+
+    function renderScores() {
+        let scores = JSON.parse(localStorage.getItem('bubble_scores') || "[]");
+        document.getElementById('score-body').innerHTML = scores.map(s => `<div>${s.name}: ${s.score}</div>`).join('') || "لا يوجد أبطال بعد";
+    }
+
+    // Initialize Background
+    for(let i=0; i<10; i++) {
+        const b = document.createElement('div');
+        b.className = 'floating-bubble';
+        b.style.width = b.style.height = Math.random()*50+20 + 'px';
+        b.style.left = Math.random()*100 + '%'; b.style.top = Math.random()*100 + '%';
+        document.getElementById('bubble-bg').appendChild(b);
+    }
+</script>
+</body>
+</html>
